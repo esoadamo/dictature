@@ -8,19 +8,19 @@ from typing import Union, Optional, Dict, Any, Set, Iterator, Tuple
 from .sqlitedb import SQLiteDB
 
 
-class IndexedDBManager:
+class SQLiDictature:
     def __init__(self, file: Union[Path, str]) -> None:
         self.__db = SQLiteDB(file)
-        self.__db_cache: Dict[str, "IndexedDB"] = {}
+        self.__db_cache: Dict[str, "SQLiDictatureTable"] = {}
 
     def keys(self) -> Set[str]:
         tables = self.__db.execute("SELECT tbl_name FROM sqlite_master WHERE type='table' AND tbl_name LIKE 'db_%'")
         return {table[0][3:] for table in tables}
 
-    def values(self) -> Iterator["IndexedDB"]:
+    def values(self) -> Iterator["SQLiDictatureTable"]:
         return map(lambda x: x[1], self.items())
 
-    def items(self) -> Iterator[Tuple[str, "IndexedDB"]]:
+    def items(self) -> Iterator[Tuple[str, "SQLiDictatureTable"]]:
         for k in self.keys():
             yield k, self[k]
 
@@ -30,11 +30,11 @@ class IndexedDBManager:
     def __str__(self):
         return str(self.to_dict())
 
-    def __getitem__(self, item: str) -> "IndexedDB":
+    def __getitem__(self, item: str) -> "SQLiDictatureTable":
         if len(self.__db_cache) > 128:
             del self.__db_cache[choice(list(self.__db_cache.keys()))]
         if item not in self.__db_cache:
-            self.__db_cache[item] = IndexedDB(self.__db, item)
+            self.__db_cache[item] = SQLiDictatureTable(self.__db, item)
         return self.__db_cache[item]
 
     def __delitem__(self, key: str) -> None:
@@ -50,7 +50,7 @@ class IndexedDBManager:
         return not not self.keys()
 
 
-class IndexedDB:
+class SQLiDictatureTable:
     def __init__(self, db: SQLiteDB, db_name: str):
         self.__db = db
         self.__table_created = False

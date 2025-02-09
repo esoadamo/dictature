@@ -11,7 +11,7 @@ pip install sqlidictature
 ## Database usage
 
 ```python
-from sqlitedb import SQLiteDB
+from sqlidictature import SQLiteDB
 db = SQLiteDB('my.sqlitedb')
 for record in db.execute("SELECT * FROM table"):
     print(record)
@@ -21,7 +21,7 @@ for record in db.execute("SELECT * FROM table"):
 This package also includes a class that allows you to use your SQLite db as a Python dictionary:
 
 ```python
-from sqlitedb import IndexedDBManager
+from sqlidictature import SQLiDictature
 
 # will use/create the db file
 dictionary = IndexedDBManager('my.sqlitedb')

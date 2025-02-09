@@ -1,2 +1,2 @@
 from .sqlitedb import SQLiteDB, DBResult
-from .indexedb import IndexedDBManager
+from .indexedb import SQLiDictature
