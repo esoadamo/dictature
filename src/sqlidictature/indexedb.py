@@ -1,5 +1,6 @@
 import json
 import pickle
+from gzip import compress, decompress
 from base64 import b64encode, b64decode
 from pathlib import Path
 from random import choice
@@ -104,7 +105,7 @@ class SQLiDictatureTable:
                 if jsonized_state == 1:
                     value = json.loads(value)
                 elif jsonized_state == 2:
-                    value = pickle.loads(b64decode(value))
+                    value = pickle.loads(decompress(b64decode(value)))
 
             return value
         raise KeyError
@@ -119,7 +120,7 @@ class SQLiDictatureTable:
                 value = json.dumps(value)
                 jsonized_status = 1
             except TypeError:
-                value = b64encode(pickle.dumps(value)).decode('ascii')
+                value = b64encode(compress(pickle.dumps(value))).decode('ascii')
                 jsonized_status = 2
 
         if self.key_exists(key):
