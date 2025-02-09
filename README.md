@@ -1,11 +1,11 @@
-# SQLiteDB
+# SQLiDictature
 
 A wrapper for Python's inbuilt SQLite with multithreading support.
 
 ## Installation
 
 ```shell
-pip install git+https://github.com/esoadamo/Python-SQLiteDB.git
+pip install sqlidictature
 ```
 
 ## Database usage

@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sqlidictature"
+version = "0.9.9"
+description = "sqlidictature -- A wrapper for Python's inbuilt SQLite with multithreading support and dict-like interface."
+authors = [
+    { name = "Adam Hlavacek", email = "git@adamhlavacek.com" }
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+readme = "README.md"
+
+[project.urls]
+Homepage = "https://github.com/esoadamo/sqlidictature"
+Issues = "https://github.com/esoadamo/sqlidictature/issues"
+
+[tool.setuptools]
+include-package-data = true
