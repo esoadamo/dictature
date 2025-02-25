@@ -1,30 +1,24 @@
 # SQLiDictature
 
-A wrapper for Python's inbuilt SQLite with multithreading support.
+A wrapper for Python's dictionary with multiple backends.
 
 ## Installation
 
 ```shell
-pip install sqlidictature
+pip install dictature
 ```
 
-## Database usage
-
-```python
-from sqlidictature import SQLiteDB
-db = SQLiteDB('my.sqlitedb')
-for record in db.execute("SELECT * FROM table"):
-    print(record)
-```
-
-## IndexedDB usage
+## Dictature usage
 This package also includes a class that allows you to use your SQLite db as a Python dictionary:
 
 ```python
-from sqlidictature import SQLiDictature
+from dictature import Dictature
+from dictature.backend import DictatureBackendDirectory, DictatureBackendSQLite
 
+# will use/create the db directory
+# dictionary = Dictature(DictatureBackendDirectory('test_data'))
 # will use/create the db file
-dictionary = IndexedDBManager('my.sqlitedb')
+dictionary = Dictature(DictatureBackendSQLite('test_data.sqlite3'))
 
 # will create a table db_test and there a row called foo with value bar
 dictionary['test']['foo'] = 'bar'

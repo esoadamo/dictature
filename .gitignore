@@ -3,3 +3,4 @@ venv/
 test*
 *.egg-info/
 dist/
+__pycache__

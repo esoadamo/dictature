@@ -1,0 +1,1 @@
+from .dictature import Dictature
