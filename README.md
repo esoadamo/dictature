@@ -1,4 +1,4 @@
-# SQLiDictature
+# Dictature
 
 A wrapper for Python's dictionary with multiple backends.
 
@@ -9,7 +9,7 @@ pip install dictature
 ```
 
 ## Dictature usage
-This package also includes a class that allows you to use your SQLite db as a Python dictionary:
+This package also includes a class that allows you to use your SQLite db or any backend as a Python dictionary:
 
 ```python
 from dictature import Dictature
@@ -35,4 +35,28 @@ print(dictionary['test']['thread'])  # prints <class 'threading.Thread'>
 # and deleting
 del dictionary['test']['list']  # deletes the record
 del dictionary['test']  # drops whole table
+```
+
+Currently, the following backends are supported:
+- `DictatureBackendDirectory`: stores the data in a directory as json files
+- `DictatureBackendSQLite`: stores the data in a SQLite database
+
+### Transformers
+
+You can also use transformers to change how the values are stored. E.g. to encrypt data, you can use the
+`AESTransformer` (which requires the `pycryptodome` package):
+
+```python
+from dictature import Dictature
+from dictature.backend import DictatureBackendDirectory
+from dictature.transformer.aes import AESTransformer
+
+name_transformer = AESTransformer('password1', True)
+value_transformer = AESTransformer('password2', False)
+
+dictionary = Dictature(
+    DictatureBackendSQLite('test_data.sqlite3'),
+    name_transformer=name_transformer,
+    value_transformer=value_transformer
+)
 ```

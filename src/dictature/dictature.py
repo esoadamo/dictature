@@ -6,15 +6,23 @@ from random import choice
 from typing import Optional, Dict, Any, Set, Iterator, Tuple
 
 from .backend import DictatureBackendMock, ValueMode, Value
+from .transformer import MockTransformer, PassthroughTransformer
 
 
 class Dictature:
-    def __init__(self, backend: DictatureBackendMock) -> None:
-        self.__db = backend
-        self.__db_cache: Dict[str, "DictatureTable"] = {}
+    def __init__(
+            self,
+            backend: DictatureBackendMock,
+            name_transformer: MockTransformer = PassthroughTransformer(),
+            value_transformer: MockTransformer = PassthroughTransformer(),
+    ) -> None:
+        self.__backend = backend
+        self.__table_cache: Dict[str, "DictatureTable"] = {}
+        self.__name_transformer = name_transformer
+        self.__value_transformer = value_transformer
 
     def keys(self) -> Set[str]:
-        return set(self.__db.keys())
+        return set(map(self.__name_transformer.backward, self.__backend.keys()))
 
     def values(self) -> Iterator["DictatureTable"]:
         return map(lambda x: x[1], self.items())
@@ -30,11 +38,16 @@ class Dictature:
         return str(self.to_dict())
 
     def __getitem__(self, item: str) -> "DictatureTable":
-        if len(self.__db_cache) > 128:
-            del self.__db_cache[choice(list(self.__db_cache.keys()))]
-        if item not in self.__db_cache:
-            self.__db_cache[item] = DictatureTable(self.__db, item)
-        return self.__db_cache[item]
+        if len(self.__table_cache) > 128:
+            del self.__table_cache[choice(list(self.__table_cache.keys()))]
+        if item not in self.__table_cache:
+            self.__table_cache[item] = DictatureTable(
+                self.__backend,
+                item,
+                name_transformer=self.__name_transformer,
+                value_transformer=self.__value_transformer
+            )
+        return self.__table_cache[item]
 
     def __delitem__(self, key: str) -> None:
         self[key].drop()
@@ -47,9 +60,17 @@ class Dictature:
 
 
 class DictatureTable:
-    def __init__(self, db: DictatureBackendMock, table_name: str):
-        self.__db = db
-        self.__table = self.__db.table(table_name)
+    def __init__(
+            self,
+            backend: DictatureBackendMock,
+            table_name: str,
+            name_transformer: MockTransformer = PassthroughTransformer(),
+            value_transformer: MockTransformer = PassthroughTransformer()
+    ):
+        self.__backend = backend
+        self.__name_transformer = name_transformer
+        self.__value_transformer = value_transformer
+        self.__table = self.__backend.table(self.__name_transformer.forward(table_name))
         self.__table_created = False
 
     def get(self, item: str, default: Optional[Any] = None) -> Any:
@@ -64,7 +85,7 @@ class DictatureTable:
 
     def keys(self) -> Set[str]:
         self.__create_table()
-        return set(self.__table.keys())
+        return set(map(self.__name_transformer.backward, self.__table.keys()))
 
     def values(self) -> Iterator[Any]:
         return map(lambda x: x[1], self.items())
@@ -85,16 +106,17 @@ class DictatureTable:
 
     def __getitem__(self, item: str) -> Any:
         self.__create_table()
-        value = self.__table.get(item)
-        mode = ValueMode(value.mode)
+        saved_value = self.__table.get(self.__name_transformer.forward(item))
+        mode = ValueMode(saved_value.mode)
+        value = self.__value_transformer.backward(saved_value.value)
         match mode:
             case ValueMode.string:
-                return value.value
+                return value
             case ValueMode.json:
-                return json.loads(value.value)
+                return json.loads(value)
             case ValueMode.pickle:
-                return pickle.loads(decompress(b64decode(value.value.encode('ascii'))))
-        raise ValueError(f"Unknown mode '{value.mode}'")
+                return pickle.loads(decompress(b64decode(value.encode('ascii'))))
+        raise ValueError(f"Unknown mode '{mode}'")
 
     def __setitem__(self, key: str, value: Any) -> None:
         self.__create_table()
@@ -108,10 +130,12 @@ class DictatureTable:
                 value = b64encode(compress(pickle.dumps(value))).decode('ascii')
                 value_mode = value_mode.pickle
 
+        key = self.__name_transformer.forward(key)
+        value = self.__value_transformer.forward(value)
         self.__table.set(key, Value(value=value, mode=value_mode.value))
 
     def __delitem__(self, key: str) -> None:
-        self.__table.delete(key)
+        self.__table.delete(self.__name_transformer.forward(key))
 
     def __contains__(self, item: str):
         return item in self.keys()

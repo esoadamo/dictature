@@ -17,7 +17,8 @@ class DictatureBackendDirectory(DictatureBackendMock):
     def keys(self) -> Iterable[str]:
         for child in self.__directory.iterdir():
             if child.is_dir() and child.name.startswith(self.__dir_prefix):
-                yield child.name[len(self.__dir_prefix):]
+                # noinspection PyProtectedMember
+                yield DictatureTableDirectory._filename_decode(child.name[len(self.__dir_prefix):], suffix='')
 
     def table(self, name: str) -> 'DictatureTableMock':
         return DictatureTableDirectory(self.__directory, name, self.__dir_prefix)
@@ -25,13 +26,13 @@ class DictatureBackendDirectory(DictatureBackendMock):
 
 class DictatureTableDirectory(DictatureTableMock):
     def __init__(self, path_root: Path, name: str, db_prefix: str, prefix: str = 'item_') -> None:
-        self.__path = path_root / (db_prefix + self.__filename_encode(name, suffix=''))
+        self.__path = path_root / (db_prefix + self._filename_encode(name, suffix=''))
         self.__prefix = prefix
 
     def keys(self) -> Iterable[str]:
         for child in self.__path.iterdir():
             if child.is_file() and child.name.startswith(self.__prefix) and not child.name.endswith('.tmp'):
-                yield self.__filename_decode(child.name[len(self.__prefix):])
+                yield self._filename_decode(child.name[len(self.__prefix):])
 
     def drop(self) -> None:
         rmtree(self.__path)
@@ -64,16 +65,17 @@ class DictatureTableDirectory(DictatureTableMock):
             self.__item_path(item).unlink()
 
     def __item_path(self, item: str) -> Path:
-        return self.__path / (self.__prefix + self.__filename_encode(item))
+        return self.__path / (self.__prefix + self._filename_encode(item))
 
     @staticmethod
-    def __filename_encode(name: str, suffix: str = '.txt') -> str:
+    def _filename_encode(name: str, suffix: str = '.txt') -> str:
         if name == sub(r'[^\w_. -]', '_', name):
             return f"d_{name}{suffix}"
         return f'e_{name.encode('utf-8').hex()}{suffix}'
 
     @staticmethod
-    def __filename_decode(name: str) -> str:
+    def _filename_decode(name: str, suffix: str = '.txt') -> str:
+        encoded_name = name[2:-len(suffix) if suffix else len(name)]
         if name.startswith('d_'):
-            return name[2:-5]
-        return bytes.fromhex(name[2:-5]).decode('utf-8')
+            return encoded_name
+        return bytes.fromhex(encoded_name).decode('utf-8')
