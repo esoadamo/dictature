@@ -5,3 +5,6 @@ class PassthroughTransformer(MockTransformer):
         return text
     def backward(self, text: str) -> str:
         return text
+    @property
+    def static(self) -> bool:
+        return True

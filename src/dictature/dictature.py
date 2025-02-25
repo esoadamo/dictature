@@ -70,7 +70,7 @@ class DictatureTable:
         self.__backend = backend
         self.__name_transformer = name_transformer
         self.__value_transformer = value_transformer
-        self.__table = self.__backend.table(self.__name_transformer.forward(table_name))
+        self.__table = self.__backend.table(self.__table_key(table_name))
         self.__table_created = False
 
     def get(self, item: str, default: Optional[Any] = None) -> Any:
@@ -106,7 +106,7 @@ class DictatureTable:
 
     def __getitem__(self, item: str) -> Any:
         self.__create_table()
-        saved_value = self.__table.get(self.__name_transformer.forward(item))
+        saved_value = self.__table.get(self.__item_key(item))
         mode = ValueMode(saved_value.mode)
         value = self.__value_transformer.backward(saved_value.value)
         match mode:
@@ -130,7 +130,7 @@ class DictatureTable:
                 value = b64encode(compress(pickle.dumps(value))).decode('ascii')
                 value_mode = value_mode.pickle
 
-        key = self.__name_transformer.forward(key)
+        key = self.__item_key(key)
         value = self.__value_transformer.forward(value)
         self.__table.set(key, Value(value=value, mode=value_mode.value))
 
@@ -148,3 +148,17 @@ class DictatureTable:
             return
         self.__table.create()
         self.__table_created = True
+
+    def __item_key(self, item: str) -> str:
+        if not self.__name_transformer.static:
+            for key in self.__table.keys():
+                if self.__name_transformer.backward(key) == item:
+                    return key
+        return self.__name_transformer.forward(item)
+
+    def __table_key(self, table_name: str) -> str:
+        if not self.__name_transformer.static:
+            for key in self.__backend.keys():
+                if self.__name_transformer.backward(key) == table_name:
+                    return key
+        return self.__name_transformer.forward(table_name)

@@ -12,6 +12,7 @@ class AESTransformer(MockTransformer):
     def __init__(self, passphrase: str, static_names_mode: bool, salt: str = 'dictature') -> None:
         self.__key = scrypt(passphrase, salt, 16, N=2 ** 14, r=8, p=1)
         self.__mode = AES.MODE_GCM if not static_names_mode else AES.MODE_ECB
+        self.__static = static_names_mode
 
     def forward(self, text: str) -> str:
         cipher = self.__cipher
@@ -36,3 +37,7 @@ class AESTransformer(MockTransformer):
     def __cipher(self) -> AES:
         # noinspection PyTypeChecker
         return AES.new(self.__key, self.__mode)
+
+    @property
+    def static(self) -> bool:
+        return self.__static
