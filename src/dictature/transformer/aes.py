@@ -15,7 +15,7 @@ class AESTransformer(MockTransformer):
         self.__static = static_names_mode
 
     def forward(self, text: str) -> str:
-        cipher = self.__cipher
+        cipher = self.__cipher()
         if self.__mode == AES.MODE_GCM:
             ciphertext, tag = cipher.encrypt_and_digest(pad(text.encode('utf8'), AES.block_size))
             return (cipher.nonce + tag + ciphertext).hex()
@@ -24,19 +24,15 @@ class AESTransformer(MockTransformer):
 
     def backward(self, text: str) -> str:
         data = bytes.fromhex(text)
-        cipher = self.__cipher
         if self.__mode == AES.MODE_GCM:
             nonce, tag, ciphertext = data[:16], data[16:32], data[32:]
-            # noinspection PyTypeChecker
-            cipher = AES.new(self.__key, self.__mode, nonce=nonce)
-            return unpad(cipher.decrypt_and_verify(ciphertext, tag), AES.block_size).decode('utf8')
+            return unpad(self.__cipher(nonce=nonce).decrypt_and_verify(ciphertext, tag), AES.block_size).decode('utf8')
         else:
-            return unpad(cipher.decrypt(data), AES.block_size).decode('utf8')
+            return unpad(self.__cipher().decrypt(data), AES.block_size).decode('utf8')
 
-    @property
-    def __cipher(self) -> AES:
+    def __cipher(self, **kwargs) -> AES:
         # noinspection PyTypeChecker
-        return AES.new(self.__key, self.__mode)
+        return AES.new(self.__key, self.__mode, **kwargs)
 
     @property
     def static(self) -> bool:

@@ -71,7 +71,8 @@ class DictatureTableDirectory(DictatureTableMock):
     def _filename_encode(name: str, suffix: str = '.txt') -> str:
         if name == sub(r'[^\w_. -]', '_', name):
             return f"d_{name}{suffix}"
-        return f'e_{name.encode('utf-8').hex()}{suffix}'
+        name = name.encode('utf-8').hex()
+        return f'e_{name}{suffix}'
 
     @staticmethod
     def _filename_decode(name: str, suffix: str = '.txt') -> str:
