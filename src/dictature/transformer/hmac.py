@@ -5,6 +5,10 @@ from .mock import MockTransformer
 
 class HmacTransformer(MockTransformer):
     def __init__(self, secret: str = 'dictature') -> None:
+        """
+        Perform HMAC on the text.
+        :param secret: secret key to use for HMAC, if not provided works as a simple hash function
+        """
         self.__secret = secret
 
     def forward(self, text: str) -> str:

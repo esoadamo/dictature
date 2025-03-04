@@ -9,6 +9,11 @@ from .mock import DictatureTableMock, DictatureBackendMock, Value, ValueMode
 
 class DictatureBackendDirectory(DictatureBackendMock):
     def __init__(self, directory: Union[Path, str], dir_prefix: str = 'db_') -> None:
+        """
+        Create a new directory backend
+        :param directory: directory to store the data
+        :param dir_prefix: prefix for the directories of the tables
+        """
         if isinstance(directory, str):
             directory = Path(directory)
         self.__directory = directory

@@ -17,30 +17,63 @@ class Dictature:
             value_transformer: MockTransformer = PassthroughTransformer(),
             table_name_transformer: Optional[MockTransformer] = None,
     ) -> None:
+        """
+        Create a new Dictature object
+        :param backend: backend to use
+        :param name_transformer: transformer to use for table and key names
+        :param value_transformer: transformer to use for values
+        :param table_name_transformer: transformer to use for table names, if None, name_transformer is used
+        """
         self.__backend = backend
         self.__table_cache: Dict[str, "DictatureTable"] = {}
         self.__name_transformer = name_transformer
         self.__value_transformer = value_transformer
         self.__table_name_transformer = table_name_transformer or name_transformer
+        self.__cache_size = 4096
 
     def keys(self) -> Set[str]:
+        """
+        Return all table names
+        :return: all table names
+        """
         return set(map(self.__name_transformer.backward, self.__backend.keys()))
 
     def values(self) -> Iterator["DictatureTable"]:
+        """
+        Return all tables
+        :return: all tables
+        """
         return map(lambda x: x[1], self.items())
 
     def items(self) -> Iterator[Tuple[str, "DictatureTable"]]:
+        """
+        Return all tables with their instances
+        :return: all tables with their instances
+        """
         for k in self.keys():
             yield k, self[k]
 
     def to_dict(self) -> Dict[str, Any]:
+        """
+        Return all tables as a dictionary
+        :return: all tables as a dictionary
+        """
         return {k: v.to_dict() for k, v in self.items()}
 
     def __str__(self):
+        """
+        Return all tables as a string
+        :return: all tables as a string
+        """
         return str(self.to_dict())
 
     def __getitem__(self, item: str) -> "DictatureTable":
-        if len(self.__table_cache) > 128:
+        """
+        Get a table by name
+        :param item: name of the table
+        :return: table instance
+        """
+        if len(self.__table_cache) > self.__cache_size:
             del self.__table_cache[choice(list(self.__table_cache.keys()))]
         if item not in self.__table_cache:
             self.__table_cache[item] = DictatureTable(
@@ -52,12 +85,26 @@ class Dictature:
         return self.__table_cache[item]
 
     def __delitem__(self, key: str) -> None:
+        """
+        Delete a table
+        :param key: name of the table
+        :return: None
+        """
         self[key].drop()
 
     def __contains__(self, item: str) -> bool:
+        """
+        Check if a table exists
+        :param item: name of the table
+        :return: True if the table exists, False otherwise
+        """
         return item in self.keys()
 
     def __bool__(self) -> bool:
+        """
+        Check if there are any tables
+        :return: True if there are tables, False otherwise
+        """
         return not not self.keys()
 
 
@@ -69,6 +116,13 @@ class DictatureTable:
             name_transformer: MockTransformer = PassthroughTransformer(),
             value_transformer: MockTransformer = PassthroughTransformer()
     ):
+        """
+        Create a new DictatureTable object
+        :param backend: backend to use
+        :param table_name: name of the table
+        :param name_transformer:  transformer to use for key names
+        :param value_transformer: transformer to use for values
+        """
         self.__backend = backend
         self.__name_transformer = name_transformer
         self.__value_transformer = value_transformer
@@ -76,37 +130,77 @@ class DictatureTable:
         self.__table_created = False
 
     def get(self, item: str, default: Optional[Any] = None) -> Any:
+        """
+        Get a value from the table
+        :param item: key to get
+        :param default: default value to return if the key does not exist
+        :return: value or default
+        """
         try:
             return self[item]
         except KeyError:
             return default
 
     def key_exists(self, item: str) -> bool:
+        """
+        Check if a key exists
+        :param item: key to check
+        :return: True if the key exists, False otherwise
+        """
         self.__create_table()
         return item in self.keys()
 
     def keys(self) -> Set[str]:
+        """
+        Return all keys in the table
+        :return: all keys in the table
+        """
         self.__create_table()
         return set(map(self.__name_transformer.backward, self.__table.keys()))
 
     def values(self) -> Iterator[Any]:
+        """
+        Return all values in the table
+        :return: all values in the table
+        """
         return map(lambda x: x[1], self.items())
 
     def items(self) -> Iterator[Tuple[str, Any]]:
+        """
+        Return all items in the table
+        :return: all items in the table
+        """
         for k in self.keys():
             yield k, self[k]
 
     def drop(self) -> None:
+        """
+        Delete the table
+        :return: None
+        """
         self.__create_table()
         self.__table.drop()
 
     def to_dict(self) -> Dict[str, Any]:
+        """
+        Return all items as a dictionary
+        :return: all items as a dictionary
+        """
         return {k: v for k, v in self.items()}
 
     def __str__(self):
+        """
+        Return all items as a string
+        :return: all items as a string
+        """
         return str(self.to_dict())
 
     def __getitem__(self, item: str) -> Any:
+        """
+        Get a value from the table
+        :param item: key to get
+        :return: value
+        """
         self.__create_table()
         saved_value = self.__table.get(self.__item_key(item))
         mode = ValueMode(saved_value.mode)
@@ -120,6 +214,12 @@ class DictatureTable:
         raise ValueError(f"Unknown mode '{mode}'")
 
     def __setitem__(self, key: str, value: Any) -> None:
+        """
+        Set a value in the table
+        :param key: key to set
+        :param value: value to set
+        :return: None
+        """
         self.__create_table()
         value_mode = ValueMode.string
 
@@ -136,21 +236,44 @@ class DictatureTable:
         self.__table.set(key, Value(value=value, mode=value_mode.value))
 
     def __delitem__(self, key: str) -> None:
+        """
+        Delete a key from the table
+        :param key: key to delete
+        :return: None
+        """
         self.__table.delete(self.__item_key(key))
 
     def __contains__(self, item: str):
+        """
+        Check if a key exists
+        :param item: key to check
+        :return: True if the key exists, False otherwise
+        """
         return item in self.keys()
 
     def __bool__(self) -> bool:
+        """
+        Check if there are any items in the table
+        :return: True if there are items, False otherwise
+        """
         return not not self.keys()
 
     def __create_table(self) -> None:
+        """
+        Create the table if it does not exist
+        :return: None
+        """
         if self.__table_created:
             return
         self.__table.create()
         self.__table_created = True
 
     def __item_key(self, item: str) -> str:
+        """
+        Transform the key for storage
+        :param item: key to transform
+        :return: transformed key
+        """
         if not self.__name_transformer.static:
             for key in self.__table.keys():
                 if self.__name_transformer.backward(key) == item:
@@ -158,6 +281,11 @@ class DictatureTable:
         return self.__name_transformer.forward(item)
 
     def __table_key(self, table_name: str) -> str:
+        """
+        Transform the table name for storage
+        :param table_name: table name to transform
+        :return: transformed table name
+        """
         if not self.__name_transformer.static:
             for key in self.__backend.keys():
                 if self.__name_transformer.backward(key) == table_name:

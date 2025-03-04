@@ -5,6 +5,10 @@ from .mock import MockTransformer
 
 class PipelineTransformer(MockTransformer):
     def __init__(self, transformers: List[MockTransformer]) -> None:
+        """
+        Create a pipeline of transformers. The text is passed through each transformer in the order they are provided.
+        :param transformers: list of transformers to use
+        """
         self.__transformers = transformers
 
     def forward(self, text: str) -> str:

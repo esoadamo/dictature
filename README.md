@@ -40,6 +40,7 @@ del dictionary['test']  # drops whole table
 Currently, the following backends are supported:
 - `DictatureBackendDirectory`: stores the data in a directory as json files
 - `DictatureBackendSQLite`: stores the data in a SQLite database
+- `DictatureBackendMISP`: stores the data in a MISP instance
 
 ### Transformers
 
@@ -60,3 +61,9 @@ dictionary = Dictature(
     value_transformer=value_transformer
 )
 ```
+
+Currently, the following transformers are supported:
+- `AESTransformer`: encrypts/decrypts the data using AES
+- `HmacTransformer`: signs the data using HMAC or performs hash integrity checks
+- `PassthroughTransformer`: does nothing
+- `PipelineTransformer`: chains multiple transformers

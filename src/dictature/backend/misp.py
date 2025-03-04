@@ -1,7 +1,6 @@
-from re import sub
 from json import dumps, loads
-from enum import Enum
-from typing import Iterable, Union, Optional
+from re import sub
+from typing import Iterable, Optional
 
 from .mock import DictatureTableMock, DictatureBackendMock, Value, ValueMode
 
@@ -13,6 +12,12 @@ except ImportError as e:
 
 class DictatureBackendMISP(DictatureBackendMock):
     def __init__(self, misp: PyMISP, tag_name: str = 'storage:dictature', prefix: str = 'Dictature storage: ') -> None:
+        """
+        Create a new MISP backend
+        :param misp: PyMISP instance
+        :param tag_name: tag name to use for the tables
+        :param prefix: prefix for the event names
+        """
         self.__misp = misp
         self.__tag_name = tag_name
         self.__prefix = prefix
@@ -25,10 +30,10 @@ class DictatureBackendMISP(DictatureBackendMock):
             yield name[len(self.__prefix):]
 
     def table(self, name: str) -> 'DictatureTableMock':
-        return DictatureTableDirectory(self.__misp, self.__prefix + name, self.__tag_name)
+        return DictatureTableMISP(self.__misp, self.__prefix + name, self.__tag_name)
 
 
-class DictatureTableDirectory(DictatureTableMock):
+class DictatureTableMISP(DictatureTableMock):
     def __init__(self, misp: PyMISP, event_description: str, tag: str) -> None:
         self.__misp = misp
         self.__event_description = event_description
@@ -36,7 +41,7 @@ class DictatureTableDirectory(DictatureTableMock):
         self.__event: Optional[MISPEvent] = None
 
     def keys(self) -> Iterable[str]:
-        for attribute in self.__get_event().attributes:
+        for attribute in self.__event_attributes():
             yield attribute.value
 
     def drop(self) -> None:
@@ -49,7 +54,7 @@ class DictatureTableDirectory(DictatureTableMock):
         save_as_json = value.mode != ValueMode.string.value or value.value.startswith('{')
         save_data = dumps({'value': value.value, 'mode': value.mode}, indent=1) if save_as_json else value.value
 
-        for attribute in self.__get_event().attributes:
+        for attribute in self.__event_attributes():
             if attribute.value == item:
                 attribute.value = item
                 attribute.comment = save_data
@@ -59,14 +64,14 @@ class DictatureTableDirectory(DictatureTableMock):
             attribute = MISPAttribute()
             attribute.value = item
             attribute.comment = save_data
-            attribute.type = 'other'
+            attribute.type = 'comment'
             attribute.to_ids = False
             attribute.disable_correlation = True
             self.__misp.add_attribute(self.__get_event(), attribute)
             self.__get_event().attributes.append(attribute)
 
     def get(self, item: str) -> Value:
-        for attribute in self.__get_event().attributes:
+        for attribute in self.__event_attributes():
             if attribute.value == item:
                 if attribute.comment.startswith('{'):
                     data = loads(attribute.comment)
@@ -75,8 +80,11 @@ class DictatureTableDirectory(DictatureTableMock):
         raise KeyError(item)
 
     def delete(self, item: str) -> None:
-        for attribute in self.__get_event().attributes:
+        for attribute in self.__event_attributes():
             if attribute.value == item:
+                # First update the attribute as deletion is not recognized immediately
+                attribute.type = 'other'
+                self.__misp.update_attribute(attribute)
                 self.__misp.delete_attribute(attribute)
                 break
 
@@ -96,6 +104,12 @@ class DictatureTableDirectory(DictatureTableMock):
                 self.__misp.add_event(event)
                 self.__event = event
         return self.__event
+
+    def __event_attributes(self) -> Iterable[MISPAttribute]:
+        for attribute in self.__get_event().attributes:
+            if attribute.type != 'comment' or (hasattr(attribute, 'deleted') and attribute.deleted):
+                continue
+            yield attribute
 
     @staticmethod
     def _record_encode(name: str, suffix: str = '.txt') -> str:

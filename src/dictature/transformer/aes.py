@@ -10,6 +10,12 @@ from .mock import MockTransformer
 
 class AESTransformer(MockTransformer):
     def __init__(self, passphrase: str, static_names_mode: bool, salt: str = 'dictature') -> None:
+        """
+        Create a new AES transformer
+        :param passphrase: secret passphrase to encrypt/decrypt the data
+        :param static_names_mode: if True, the transformer will use ECB mode instead of GCM (True decreases security, increases speed)
+        :param salt: salt to use for the key derivation
+        """
         self.__key = scrypt(passphrase, salt, 16, N=2 ** 14, r=8, p=1)
         self.__mode = AES.MODE_GCM if not static_names_mode else AES.MODE_ECB
         self.__static = static_names_mode

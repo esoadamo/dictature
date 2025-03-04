@@ -7,6 +7,10 @@ from .mock import DictatureBackendMock, DictatureTableMock, Value, ValueMode
 
 class DictatureBackendSQLite(DictatureBackendMock):
     def __init__(self, file: Union[str, Path]) -> None:
+        """
+        Create a new SQLite backend
+        :param file: file to store the database
+        """
         if isinstance(file, str):
             file = Path(file)
         self.__file = file
@@ -31,7 +35,6 @@ class DictatureBackendSQLite(DictatureBackendMock):
 
     def __del__(self):
         self.__connection.close()
-
 
 
 class DictatureTableSQLite(DictatureTableMock):
