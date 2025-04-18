@@ -1,10 +1,8 @@
-from re import sub
-from json import dumps, loads
 from pathlib import Path
 from typing import Iterable, Union
 from shutil import rmtree
 
-from .mock import DictatureTableMock, DictatureBackendMock, Value, ValueMode
+from .mock import DictatureTableMock, DictatureBackendMock, Value, ValueMode, ValueSerializer, ValueSerializerMode
 
 
 class DictatureBackendDirectory(DictatureBackendMock):
@@ -33,6 +31,7 @@ class DictatureTableDirectory(DictatureTableMock):
     def __init__(self, path_root: Path, name: str, db_prefix: str, prefix: str = 'item_') -> None:
         self.__path = path_root / (db_prefix + self._filename_encode(name, suffix=''))
         self.__prefix = prefix
+        self.__serializer = ValueSerializer(mode=ValueSerializerMode.filename_only)
 
     def keys(self) -> Iterable[str]:
         for child in self.__path.iterdir():
@@ -49,8 +48,7 @@ class DictatureTableDirectory(DictatureTableMock):
         file_target = self.__item_path(item)
         file_target_tmp = file_target.with_suffix('.tmp')
 
-        save_as_json = value.mode != ValueMode.string.value or value.value.startswith('{')
-        save_data = dumps({'value': value.value, 'mode': value.mode}, indent=1) if save_as_json else value.value
+        save_data = self.__serializer.serialize(value)
 
         file_target_tmp.write_text(save_data)
         file_target_tmp.rename(file_target)
@@ -58,10 +56,7 @@ class DictatureTableDirectory(DictatureTableMock):
     def get(self, item: str) -> Value:
         try:
             save_data = self.__item_path(item).read_text()
-            if save_data.startswith('{'):
-                data = loads(save_data)
-                return Value(data['value'], data['mode'])
-            return Value(save_data, ValueMode.string.value)
+            return self.__serializer.deserialize(save_data)
         except FileNotFoundError:
             raise KeyError(item)
 
@@ -74,14 +69,13 @@ class DictatureTableDirectory(DictatureTableMock):
 
     @staticmethod
     def _filename_encode(name: str, suffix: str = '.txt') -> str:
-        if name == sub(r'[^\w_. -]', '_', name):
-            return f"d_{name}{suffix}"
-        name = name.encode('utf-8').hex()
-        return f'e_{name}{suffix}'
+        return ValueSerializer(mode=ValueSerializerMode.filename_only).serialize(Value(
+            value=name,
+            mode=ValueMode.string.value
+        )) + suffix
 
     @staticmethod
     def _filename_decode(name: str, suffix: str = '.txt') -> str:
-        encoded_name = name[2:-len(suffix) if suffix else len(name)]
-        if name.startswith('d_'):
-            return encoded_name
-        return bytes.fromhex(encoded_name).decode('utf-8')
+        if suffix:
+            name = name[:-len(suffix)]
+        return ValueSerializer(mode=ValueSerializerMode.filename_only).deserialize(name).value

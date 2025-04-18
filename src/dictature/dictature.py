@@ -229,7 +229,7 @@ class DictatureTable:
                 value_mode = ValueMode.json
             except TypeError:
                 value = b64encode(compress(pickle.dumps(value))).decode('ascii')
-                value_mode = value_mode.pickle
+                value_mode = ValueMode.pickle
 
         key = self.__item_key(key)
         value = self.__value_transformer.forward(value)

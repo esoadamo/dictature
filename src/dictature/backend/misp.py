@@ -1,8 +1,6 @@
-from json import dumps, loads
-from re import sub
 from typing import Iterable, Optional
 
-from .mock import DictatureTableMock, DictatureBackendMock, Value, ValueMode
+from .mock import DictatureTableMock, DictatureBackendMock, Value, ValueMode, ValueSerializer, ValueSerializerMode
 
 try:
     from pymisp import PyMISP, MISPEvent, MISPAttribute
@@ -39,6 +37,7 @@ class DictatureTableMISP(DictatureTableMock):
         self.__event_description = event_description
         self.__tag = tag
         self.__event: Optional[MISPEvent] = None
+        self.__serializer = ValueSerializer(mode=ValueSerializerMode.ascii_only)
 
     def keys(self) -> Iterable[str]:
         for attribute in self.__event_attributes():
@@ -51,18 +50,18 @@ class DictatureTableMISP(DictatureTableMock):
         self.__get_event()
 
     def set(self, item: str, value: Value) -> None:
-        save_as_json = value.mode != ValueMode.string.value or value.value.startswith('{')
-        save_data = dumps({'value': value.value, 'mode': value.mode}, indent=1) if save_as_json else value.value
+        item_name = self.__serializer.serialize(Value(value=item, mode=ValueMode.string.value))
+        save_data = self.__serializer.serialize(value)
 
         for attribute in self.__event_attributes():
-            if attribute.value == item:
-                attribute.value = item
+            if attribute.value == item_name:
+                attribute.value = item_name
                 attribute.comment = save_data
                 self.__misp.update_attribute(attribute)
                 break
         else:
             attribute = MISPAttribute()
-            attribute.value = item
+            attribute.value = item_name
             attribute.comment = save_data
             attribute.type = 'comment'
             attribute.to_ids = False
@@ -71,12 +70,10 @@ class DictatureTableMISP(DictatureTableMock):
             self.__get_event().attributes.append(attribute)
 
     def get(self, item: str) -> Value:
+        item_name = self.__serializer.serialize(Value(value=item, mode=ValueMode.string.value))
         for attribute in self.__event_attributes():
-            if attribute.value == item:
-                if attribute.comment.startswith('{'):
-                    data = loads(attribute.comment)
-                    return Value(data['value'], data['mode'])
-                return Value(attribute.comment, ValueMode.string.value)
+            if attribute.value == item_name:
+                return self.__serializer.deserialize(attribute.comment)
         raise KeyError(item)
 
     def delete(self, item: str) -> None:
@@ -110,17 +107,3 @@ class DictatureTableMISP(DictatureTableMock):
             if attribute.type != 'comment' or (hasattr(attribute, 'deleted') and attribute.deleted):
                 continue
             yield attribute
-
-    @staticmethod
-    def _record_encode(name: str, suffix: str = '.txt') -> str:
-        if name == sub(r'[^\w_. -]', '_', name):
-            return f"d_{name}{suffix}"
-        name = name.encode('utf-8').hex()
-        return f'e_{name}{suffix}'
-
-    @staticmethod
-    def _record_decode(name: str, suffix: str = '.txt') -> str:
-        encoded_name = name[2:-len(suffix) if suffix else len(name)]
-        if name.startswith('d_'):
-            return encoded_name
-        return bytes.fromhex(encoded_name).decode('utf-8')

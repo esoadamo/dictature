@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dictature"
-version = "0.9.4"
+version = "0.9.5"
 description = "dictature -- A generic wrapper around dict-like interface with mulitple backends"
 authors = [
     { name = "Adam Hlavacek", email = "git@adamhlavacek.com" }
