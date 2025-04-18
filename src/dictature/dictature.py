@@ -221,19 +221,19 @@ class DictatureTable:
         :return: None
         """
         self.__create_table()
-        value_mode = ValueMode.string
+        value_mode: int = ValueMode.string.value
 
         if type(value) is not str:
             try:
                 value = json.dumps(value)
-                value_mode = ValueMode.json
+                value_mode = ValueMode.json.value
             except TypeError:
                 value = b64encode(compress(pickle.dumps(value))).decode('ascii')
-                value_mode = ValueMode.pickle
+                value_mode = ValueMode.pickle.value
 
         key = self.__item_key(key)
         value = self.__value_transformer.forward(value)
-        self.__table.set(key, Value(value=value, mode=value_mode.value))
+        self.__table.set(key, Value(value=value, mode=value_mode))
 
     def __delitem__(self, key: str) -> None:
         """

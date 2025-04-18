@@ -71,15 +71,14 @@ class ValueSerializer:
         :raises NotImplementedError: If the mode provided in `ValueSerializerMode`
             is unsupported.
         """
-        match self.__mode:
-            case ValueSerializerMode.hex_only:
-                allowed_chars = hexdigits
-            case ValueSerializerMode.filename_only:
-                allowed_chars = ascii_letters + digits + '_.'
-            case ValueSerializerMode.ascii_only | ValueSerializerMode.any_string:
-                allowed_chars = None
-            case _:
-                raise NotImplementedError(self.__mode)
+        if self.__mode == ValueSerializerMode.hex_only:
+            allowed_chars = hexdigits
+        elif self.__mode == ValueSerializerMode.filename_only:
+            allowed_chars = ascii_letters + digits + '_.'
+        elif self.__mode in (ValueSerializerMode.any_string, ValueSerializerMode.ascii_only):
+            allowed_chars = None
+        else:
+            raise NotImplementedError(self.__mode)
 
         if allowed_chars is not None:
             # Only a subset of characters is allowed if all match and do not start with the reserved prefix, encode directly
