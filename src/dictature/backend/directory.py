@@ -6,7 +6,7 @@ from .mock import DictatureTableMock, DictatureBackendMock, Value, ValueMode, Va
 
 
 class DictatureBackendDirectory(DictatureBackendMock):
-    def __init__(self, directory: Union[Path, str], dir_prefix: str = 'db_') -> None:
+    def __init__(self, directory: Union[Path, str], dir_prefix: str = 'db_', item_prefix: str = 'item_') -> None:
         """
         Create a new directory backend
         :param directory: directory to store the data
@@ -16,6 +16,7 @@ class DictatureBackendDirectory(DictatureBackendMock):
             directory = Path(directory)
         self.__directory = directory
         self.__dir_prefix = dir_prefix
+        self.__item_prefix = item_prefix
 
     def keys(self) -> Iterable[str]:
         for child in self.__directory.iterdir():
@@ -24,11 +25,11 @@ class DictatureBackendDirectory(DictatureBackendMock):
                 yield DictatureTableDirectory._filename_decode(child.name[len(self.__dir_prefix):], suffix='')
 
     def table(self, name: str) -> 'DictatureTableMock':
-        return DictatureTableDirectory(self.__directory, name, self.__dir_prefix)
+        return DictatureTableDirectory(self.__directory, name, self.__dir_prefix, self.__item_prefix)
 
 
 class DictatureTableDirectory(DictatureTableMock):
-    def __init__(self, path_root: Path, name: str, db_prefix: str, prefix: str = 'item_') -> None:
+    def __init__(self, path_root: Path, name: str, db_prefix: str, prefix: str) -> None:
         self.__path = path_root / (db_prefix + self._filename_encode(name, suffix=''))
         self.__prefix = prefix
         self.__serializer = ValueSerializer(mode=ValueSerializerMode.filename_only)

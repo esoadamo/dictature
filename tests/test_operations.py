@@ -13,6 +13,7 @@ from src.dictature.transformer import PassthroughTransformer, PipelineTransforme
 from src.dictature.transformer.mock import MockTransformer
 from src.dictature.transformer.aes import AESTransformer
 from src.dictature.transformer.hmac import HmacTransformer
+from src.dictature.transformer.gzip import GzipTransformer
 
 
 BACKENDS = [
@@ -26,6 +27,7 @@ TRANSFORMERS = [
     AESTransformer('password', True),
     HmacTransformer(),
     HmacTransformer('password'),
+    GzipTransformer(),
     PipelineTransformer([HmacTransformer(), AESTransformer('password', False)]),
 ]
 
