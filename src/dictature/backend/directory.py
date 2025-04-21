@@ -32,7 +32,8 @@ class DictatureTableDirectory(DictatureTableMock):
     def __init__(self, path_root: Path, name: str, db_prefix: str, prefix: str) -> None:
         self.__path = path_root / (db_prefix + self._filename_encode(name, suffix=''))
         self.__prefix = prefix
-        self.__serializer = ValueSerializer(mode=ValueSerializerMode.filename_only)
+        self.__name_serializer = ValueSerializer(mode=ValueSerializerMode.filename_only)
+        self.__value_serializer = ValueSerializer(mode=ValueSerializerMode.any_string)
 
     def keys(self) -> Iterable[str]:
         for child in self.__path.iterdir():
@@ -49,7 +50,7 @@ class DictatureTableDirectory(DictatureTableMock):
         file_target = self.__item_path(item)
         file_target_tmp = file_target.with_suffix('.tmp')
 
-        save_data = self.__serializer.serialize(value)
+        save_data = self.__value_serializer.serialize(value)
 
         file_target_tmp.write_text(save_data)
         file_target_tmp.rename(file_target)
@@ -57,7 +58,7 @@ class DictatureTableDirectory(DictatureTableMock):
     def get(self, item: str) -> Value:
         try:
             save_data = self.__item_path(item).read_text()
-            return self.__serializer.deserialize(save_data)
+            return self.__value_serializer.deserialize(save_data)
         except FileNotFoundError:
             raise KeyError(item)
 
