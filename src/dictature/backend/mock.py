@@ -74,7 +74,7 @@ class ValueSerializer:
         if self.__mode == ValueSerializerMode.hex_only:
             allowed_chars = hexdigits
         elif self.__mode == ValueSerializerMode.filename_only:
-            allowed_chars = ascii_letters + digits + '_.'
+            allowed_chars = ascii_letters + digits + '-_.'
         elif self.__mode in (ValueSerializerMode.any_string, ValueSerializerMode.ascii_only):
             allowed_chars = None
         else:
