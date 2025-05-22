@@ -3,7 +3,7 @@ from typing import Iterable, Optional
 from .mock import DictatureTableMock, DictatureBackendMock, Value, ValueMode, ValueSerializer, ValueSerializerMode
 
 try:
-    from pymisp import PyMISP, MISPEvent, MISPAttribute
+    from pymisp import PyMISP, MISPEvent, MISPAttribute, MISPTag
 except ImportError as e:
     raise ImportError("Please install the 'pymisp' package to use the 'DictatureBackendMISP' backend.") from e
 
@@ -92,6 +92,15 @@ class DictatureTableMISP(DictatureTableMock):
                     self.__event = event
                     break
             else:
+                # Check if tag exists, create if not
+                existing_tags = self.__misp.search_tags(self.__tag, strict_tagname=True, pythonify=True)
+                if not type(existing_tags) is list or not existing_tags:
+                    tag = MISPTag()
+                    tag.name = self.__tag
+                    tag.colour = '#000000'
+                    tag.exportable = True
+                    self.__misp.add_tag(tag)
+
                 event = MISPEvent()
                 event.info = self.__event_description
                 event.distribution = 0
