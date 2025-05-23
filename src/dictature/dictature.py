@@ -16,6 +16,7 @@ class Dictature:
             name_transformer: MockTransformer = PassthroughTransformer(),
             value_transformer: MockTransformer = PassthroughTransformer(),
             table_name_transformer: Optional[MockTransformer] = None,
+            allow_pickle: bool = True,
     ) -> None:
         """
         Create a new Dictature object
@@ -23,6 +24,7 @@ class Dictature:
         :param name_transformer: transformer to use for table and key names
         :param value_transformer: transformer to use for values
         :param table_name_transformer: transformer to use for table names, if None, name_transformer is used
+        :param allow_pickle: if True, pickle is allowed for values (warning: this may be a security risk if the data is not trusted)
         """
         self.__backend = backend
         self.__table_cache: Dict[str, "DictatureTable"] = {}
@@ -30,6 +32,7 @@ class Dictature:
         self.__value_transformer = value_transformer
         self.__table_name_transformer = table_name_transformer or name_transformer
         self.__cache_size = 4096
+        self.__allow_pickle = allow_pickle
 
     def keys(self) -> Set[str]:
         """
@@ -80,7 +83,8 @@ class Dictature:
                 self.__backend,
                 item,
                 name_transformer=self.__name_transformer,
-                value_transformer=self.__value_transformer
+                value_transformer=self.__value_transformer,
+                allow_pickle=self.__allow_pickle,
             )
         return self.__table_cache[item]
 
@@ -114,7 +118,8 @@ class DictatureTable:
             backend: DictatureBackendMock,
             table_name: str,
             name_transformer: MockTransformer = PassthroughTransformer(),
-            value_transformer: MockTransformer = PassthroughTransformer()
+            value_transformer: MockTransformer = PassthroughTransformer(),
+            allow_pickle: bool = True
     ):
         """
         Create a new DictatureTable object
@@ -122,12 +127,14 @@ class DictatureTable:
         :param table_name: name of the table
         :param name_transformer:  transformer to use for key names
         :param value_transformer: transformer to use for values
+        :param allow_pickle: if True, pickle is allowed for values (warning: this may be a security risk if the data is not trusted)
         """
         self.__backend = backend
         self.__name_transformer = name_transformer
         self.__value_transformer = value_transformer
         self.__table = self.__backend.table(self.__table_key(table_name))
         self.__table_created = False
+        self.__allow_pickle = allow_pickle
 
     def get(self, item: str, default: Optional[Any] = None) -> Any:
         """
@@ -210,6 +217,8 @@ class DictatureTable:
         elif mode == ValueMode.json:
             return json.loads(value)
         elif mode == ValueMode.pickle:
+            if not self.__allow_pickle:
+                raise ValueError("Pickle is not allowed")
             return pickle.loads(decompress(b64decode(value.encode('ascii'))))
         raise ValueError(f"Unknown mode '{mode}'")
 
@@ -228,6 +237,8 @@ class DictatureTable:
                 value = json.dumps(value)
                 value_mode = ValueMode.json.value
             except TypeError:
+                if not self.__allow_pickle:
+                    raise ValueError("Pickle is not allowed")
                 value = b64encode(compress(pickle.dumps(value))).decode('ascii')
                 value_mode = ValueMode.pickle.value
 
