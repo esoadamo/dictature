@@ -1,3 +1,5 @@
+import tempfile
+import os
 from pathlib import Path
 from typing import Iterable, Union
 from shutil import rmtree
@@ -48,7 +50,11 @@ class DictatureTableDirectory(DictatureTableMock):
 
     def set(self, item: str, value: Value) -> None:
         file_target = self.__item_path(item)
-        file_target_tmp = file_target.with_suffix('.tmp')
+
+        # Create temporary file for atomic write
+        handle, file_target_tmp_path = tempfile.mkstemp(prefix=file_target.name, suffix='.tmp', dir=file_target.parent)
+        os.close(handle)
+        file_target_tmp = Path(file_target_tmp_path)
 
         save_data = self.__value_serializer.serialize(value)
 

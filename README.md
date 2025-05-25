@@ -1,6 +1,11 @@
 # Dictature
 
-A wrapper for Python's dictionary with multiple backends.
+Make a Python dictionary out of anything.  A wrapper for Python's dictionary with multiple backends.
+Thread-safe, supports multiple backends, and allows for transformers to change how the data is stored.
+
+SQLite, directory, webdav, and more backends are supported, and you can easily create your own backend.
+
+[![PyPI version](https://badge.fury.io/py/dictature.svg)](https://badge.fury.io/py/dictature)
 
 ## Installation
 
