@@ -1,15 +1,16 @@
 import sqlite3
-from typing import Iterable, Union, Optional
 from pathlib import Path
+from typing import Iterable, Union, Optional
 
 from .mock import DictatureBackendMock, DictatureTableMock, Value, ValueMode
 
 
 class DictatureBackendSQLite(DictatureBackendMock):
-    def __init__(self, file: Union[str, Path]) -> None:
+    def __init__(self, file: Union[str, Path], prefix: str = 'tb_') -> None:
         """
         Create a new SQLite backend
         :param file: file to store the database
+        :param prefix: prefix for the tables (default: 'tb_')
         """
         if isinstance(file, str):
             file = Path(file)
@@ -19,13 +20,14 @@ class DictatureBackendSQLite(DictatureBackendMock):
             check_same_thread=False if sqlite3.threadsafety >= 3 else True
         )
         self.__cursor = self.__connection.cursor()
+        self.__prefix = prefix.replace("'", "").replace('`', '')
 
     def keys(self) -> Iterable[str]:
-        tables = self._execute("SELECT tbl_name FROM sqlite_master WHERE type='table' AND tbl_name LIKE 'tb_%'")
+        tables = self._execute(f"SELECT tbl_name FROM sqlite_master WHERE type='table' AND tbl_name LIKE '{self.__prefix}%'")
         return {table[0][3:] for table in tables}
 
     def table(self, name: str) -> 'DictatureTableMock':
-        return DictatureTableSQLite(self, name)
+        return DictatureTableSQLite(self, name, self.__prefix)
 
     def _execute(self, query: str, data: tuple = ()) -> list:
         return list(self.__cursor.execute(query, data))
@@ -38,10 +40,10 @@ class DictatureBackendSQLite(DictatureBackendMock):
 
 
 class DictatureTableSQLite(DictatureTableMock):
-    def __init__(self, parent: "DictatureBackendSQLite", name: str) -> None:
+    def __init__(self, parent: "DictatureBackendSQLite", name: str, prefix: str) -> None:
         self.__parent = parent
         self.__supports_jsonization: Optional[bool] = None
-        self.__table = "`tb_%s`" % name.replace('`', '``')
+        self.__table = "`%s`" % (prefix + name).replace('`', '``')
 
     def keys(self) -> Iterable[str]:
         # noinspection PyProtectedMember

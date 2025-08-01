@@ -48,6 +48,7 @@ Currently, the following backends are supported:
 - `DictatureBackendMISP`: stores the data in a MISP instance
 - `DictatureBackendWebdav`: stores data in a WebDav share as files
 - `DictatureBackendS3`: stores data in an S3 bucket
+- `DictatureBackendMySQL`: stores data in a MySQL database
 
 ### Transformers
 
