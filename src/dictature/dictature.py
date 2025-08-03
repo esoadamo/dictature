@@ -39,7 +39,7 @@ class Dictature:
         Return all table names
         :return: all table names
         """
-        return set(map(self.__name_transformer.backward, self.__backend.keys()))
+        return set(map(self.__table_name_transformer.backward, self.__backend.keys()))
 
     def values(self) -> Iterator["DictatureTable"]:
         """
@@ -84,6 +84,7 @@ class Dictature:
                 item,
                 name_transformer=self.__name_transformer,
                 value_transformer=self.__value_transformer,
+                table_name_transformer=self.__table_name_transformer,
                 allow_pickle=self.__allow_pickle,
             )
         return self.__table_cache[item]
@@ -119,6 +120,7 @@ class DictatureTable:
             table_name: str,
             name_transformer: MockTransformer = PassthroughTransformer(),
             value_transformer: MockTransformer = PassthroughTransformer(),
+            table_name_transformer: Optional[MockTransformer] = None,
             allow_pickle: bool = True
     ):
         """
@@ -132,6 +134,7 @@ class DictatureTable:
         self.__backend = backend
         self.__name_transformer = name_transformer
         self.__value_transformer = value_transformer
+        self.__table_name_transformer = table_name_transformer or name_transformer
         self.__table = self.__backend.table(self.__table_key(table_name))
         self.__table_created = False
         self.__allow_pickle = allow_pickle
@@ -297,8 +300,8 @@ class DictatureTable:
         :param table_name: table name to transform
         :return: transformed table name
         """
-        if not self.__name_transformer.static:
+        if not self.__table_name_transformer.static:
             for key in self.__backend.keys():
-                if self.__name_transformer.backward(key) == table_name:
+                if self.__table_name_transformer.backward(key) == table_name:
                     return key
-        return self.__name_transformer.forward(table_name)
+        return self.__table_name_transformer.forward(table_name)
