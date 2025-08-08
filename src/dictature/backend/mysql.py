@@ -38,7 +38,7 @@ class DictatureBackendMySQL(DictatureBackendMock):
     def keys(self) -> Iterable[str]:
         # noinspection SqlResolve
         tables = self._execute(f"SELECT table_name FROM information_schema.tables WHERE table_schema = %s AND table_name LIKE '{self.__prefix}%'", (self.__connection_params['database'],))
-        return {table[0][3:] for table in tables}
+        return {table[0][len(self.__prefix):] for table in tables}
 
     def table(self, name: str) -> 'DictatureTableMock':
         return DictatureTableMySQL(self, name, self.__prefix)

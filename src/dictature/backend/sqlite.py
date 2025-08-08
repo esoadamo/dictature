@@ -24,7 +24,7 @@ class DictatureBackendSQLite(DictatureBackendMock):
 
     def keys(self) -> Iterable[str]:
         tables = self._execute(f"SELECT tbl_name FROM sqlite_master WHERE type='table' AND tbl_name LIKE '{self.__prefix}%'")
-        return {table[0][3:] for table in tables}
+        return {table[0][len(self.__prefix):] for table in tables}
 
     def table(self, name: str) -> 'DictatureTableMock':
         return DictatureTableSQLite(self, name, self.__prefix)
