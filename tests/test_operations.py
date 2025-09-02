@@ -2,6 +2,7 @@ import unittest
 from itertools import product
 from typing import NamedTuple, Optional
 from tempfile import mkdtemp, mktemp
+from base64 import b64decode, b64encode
 
 from parameterized import parameterized
 
@@ -25,6 +26,7 @@ TRANSFORMERS = [
     PassthroughTransformer(),
     AESTransformer('password', False),
     AESTransformer('password', True),
+    AESTransformer('password', True, bytes_encoder=(lambda x: b64encode(x).decode('ascii')), bytes_decoder=(lambda x: b64decode(x.encode('ascii')))),
     HmacTransformer(),
     HmacTransformer('password'),
     GzipTransformer(),
