@@ -83,7 +83,7 @@ class DictatureTableMySQL(DictatureTableMock):
         `value` TEXT,
         `type` INT NOT NULL DEFAULT 0,
         PRIMARY KEY (`key`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
         """)
 
     def set(self, item: str, value: Value) -> None:

@@ -41,7 +41,9 @@ class DictatureTableMISP(DictatureTableMock):
 
     def keys(self) -> Iterable[str]:
         for attribute in self.__event_attributes():
-            yield attribute.value
+            # Deserialize the key to get the original value
+            deserialized_key = self.__serializer.deserialize(attribute.value)
+            yield deserialized_key.value
 
     def drop(self) -> None:
         self.__misp.delete_event(self.__get_event())
@@ -77,8 +79,9 @@ class DictatureTableMISP(DictatureTableMock):
         raise KeyError(item)
 
     def delete(self, item: str) -> None:
+        item_name = self.__serializer.serialize(Value(value=item, mode=ValueMode.string.value))
         for attribute in self.__event_attributes():
-            if attribute.value == item:
+            if attribute.value == item_name:
                 # First update the attribute as deletion is not recognized immediately
                 attribute.type = 'other'
                 self.__misp.update_attribute(attribute)

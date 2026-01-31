@@ -49,6 +49,7 @@ Currently, the following backends are supported:
 - `DictatureBackendWebdav`: stores data in a WebDav share as files
 - `DictatureBackendS3`: stores data in an S3 bucket
 - `DictatureBackendMySQL`: stores data in a MySQL database
+- `DictatureBackendBaserow`: stores data in a Baserow database
 
 ### Transformers
 
@@ -76,3 +77,9 @@ Currently, the following transformers are supported:
 - `GzipTransformer`: compresses given data
 - `PassthroughTransformer`: does nothing
 - `PipelineTransformer`: chains multiple transformers
+
+## Testing
+
+All tests are located inside `tests` folder. However, by default only backends that do not require any additonal
+service running are tested. If you want to test all the self-hostable backends, either setup environment variables
+for access or run `run_tests_with_backends.py` script that will create temporary backends for you via `podman-compose`.

@@ -1,0 +1,117 @@
+services:
+  mysql:
+    image: docker.io/mariadb:12.1
+    container_name: dictature-mysql
+    environment:
+      MARIADB_ROOT_PASSWORD: rootpassword
+      MARIADB_DATABASE: dictature
+      MARIADB_USER: dictature
+      MARIADB_PASSWORD: password123
+    tmpfs:
+      - /var/lib/mysql
+    ports:
+      - "127.0.0.1:33060:3306"
+    healthcheck:
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  rclone-s3:
+    image: docker.io/rclone/rclone:1.73
+    container_name: dictature-rclone-s3
+    tmpfs:
+      - /data
+    ports:
+      - "127.0.0.1:49000:9000"
+    entrypoint: /bin/sh
+    command: 
+      - -c
+      - "mkdir -p /data/dictature && rclone serve s3 /data --addr 0.0.0.0:9000 --auth-key admin,password123"
+    healthcheck:
+      test: ["CMD", "sh", "-c", "wget --spider -q http://localhost:9000/ 2>&1 || exit 0"]
+      timeout: 20s
+      retries: 10
+
+  rclone-webdav:
+    image: docker.io/rclone/rclone:1.73
+    container_name: dictature-rclone-webdav
+    tmpfs:
+      - /data
+    ports:
+      - "127.0.0.1:48080:8080"
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - "mkdir -p /data && rclone serve webdav /data --addr 0.0.0.0:8080 --user admin --pass password123"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://admin:password123@127.0.0.1:8080/"]
+      timeout: 20s
+      retries: 10
+
+  redis:
+    image: docker.io/redis:8.4
+    restart: always
+    container_name: dictature-redis
+    tmpfs:
+      - /data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      timeout: 10s
+      retries: 10
+
+  misp:
+    image: ghcr.io/nukib/misp:latest
+    container_name: dictature-misp
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_LOGIN: dictature
+      MYSQL_PASSWORD: password123
+      MYSQL_DATABASE: dictature
+      MYSQL_FLAGS: '{}'
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      MISP_BASEURL: http://localhost:8888
+      MISP_UUID: 01234567-89ab-cdef-0123-456789abcdef
+      MISP_ORG: ExampleOrg
+      MISP_HOST_ORG_ID: 1
+      MISP_MODULE_URL: http://localhost:6666
+      MISP_DEBUG: 'false'
+      MISP_OUTPUT_COMPRESSION: 'true'
+      MISP_EMAIL: noreply@example.com
+      MISP_DISABLE_EMAILING: 'true'
+    ports:
+      - "127.0.0.1:8888:80"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1/"]
+      timeout: 30s
+      retries: 15
+      start_period: 60s
+    tmpfs:
+      - /var/www/MISP/app/tmp/logs/
+      - /var/www/MISP/app/files/certs/
+      - /var/www/MISP/app/attachments/
+      - /var/www/MISP/app/files/img/orgs/
+      - /var/www/MISP/app/files/img/custom/
+      - /var/www/MISP/.gnupg/
+
+  baserow:
+    image: docker.io/baserow/baserow:2.0.6
+    container_name: dictature-baserow
+    environment:
+      BASEROW_PUBLIC_URL: http://localhost:3001
+      DISABLE_VOLUME_CHECK: "yes"
+    tmpfs:
+      - /baserow/data
+    ports:
+      - "127.0.0.1:3001:80"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1/"]
+      timeout: 30s
+      retries: 15
+      start_period: 60s

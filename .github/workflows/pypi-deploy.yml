@@ -27,10 +27,14 @@ jobs:
           sudo apt-get install -y age
           python -m pip install --upgrade pip
           pip install setuptools wheel twine build
-      - name: Run tests
+      - name: Install Podman and podman-compose
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman podman-compose
+      - name: Run tests with backends
         run: |
           pip install -r tests/requirements.txt
-          python -m unittest discover tests
+          python run_tests_with_backends.py
       - name: Build and publish
         run: |
           python -m build

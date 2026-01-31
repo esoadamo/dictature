@@ -98,7 +98,19 @@ class DictatureTableWebdav(DictatureTableMock):
         data_bytes = save_data.encode('utf-8')
 
         with io.BytesIO(data_bytes) as buffer:
-            self.__client.upload_to(buffer, item_path)
+            try:
+                self.__client.upload_to(buffer, item_path)
+            except WebDavException as e:
+                # If upload fails, ensure the directory exists and retry once
+                # This handles race conditions where mkdir hasn't completed yet
+                if '409' in str(e) or 'Conflict' in str(e):
+                    # Force directory creation and wait for it to exist
+                    self.__client.mkdir(self.__path)
+                    # Retry the upload
+                    buffer.seek(0)  # Reset buffer position
+                    self.__client.upload_to(buffer, item_path)
+                else:
+                    raise
 
     def get(self, item: str) -> Value:
         item_path = self.__item_path(item)
