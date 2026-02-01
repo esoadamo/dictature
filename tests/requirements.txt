@@ -4,6 +4,6 @@ requests>=2.32.4
 pymisp==2.4.144
 python-dotenv==1.0.1
 pytest==5.4.0
-boto3==1.42.39
+boto3==1.37.38
 webdavclient3==3.14.6
 mysql-connector-python==9.5.0
