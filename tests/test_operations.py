@@ -315,6 +315,32 @@ class TestOperations(unittest.TestCase):
         del self.backend['table']
         self.assertEqual(self.backend.keys(), {'table2'})
 
+    @parameterized.expand(SETTINGS, name_func=get_name_func)
+    def test_bulk_storage_and_retrieval(self, settings: Settings):
+        """Test storing and retrieving 110 key-value pairs to verify pagination works correctly."""
+        self.backend = Dictature(
+            backend=settings.backend,
+            name_transformer=settings.name_transformer,
+            value_transformer=settings.value_transformer,
+            table_name_transformer=settings.table_name_transformer
+        )
+        table = self.backend['bulk_test']
+        
+        # Store 110 key-value pairs
+        num_items = 110
+        expected_data = {f'key_{i}': f'value_{i}' for i in range(1, num_items + 1)}
+        
+        for key, value in expected_data.items():
+            table[key] = value
+        
+        # Verify all keys are present
+        stored_keys = table.keys()
+        self.assertEqual(stored_keys, set(expected_data.keys()))
+        
+        # Verify all values are correct
+        for key, expected_value in expected_data.items():
+            self.assertEqual(table[key], expected_value)
+
 
 if __name__ == '__main__':
     unittest.main()

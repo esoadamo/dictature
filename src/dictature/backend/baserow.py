@@ -49,7 +49,11 @@ class DictatureBackendBaserowSingleTable(DictatureBackendMock):
 
     def _request(self, method: str, url: str, params: Optional[Dict[str, Any]] = None,
                  json: Optional[Dict[str, Any]] = None) -> Any:
-        full_url = f"{self.__base_url}{url}"
+        # Handle both relative URLs and full URLs (from pagination 'next' field)
+        if url.startswith('http://') or url.startswith('https://'):
+            full_url = url
+        else:
+            full_url = f"{self.__base_url}{url}"
         response = requests.request(method, full_url, params=params, json=json, headers=self.__headers)
         if not response.ok:
             raise RuntimeError(f"Baserow API error {response.status_code}: {response.text}")
