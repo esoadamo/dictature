@@ -112,6 +112,26 @@ def initialize_extra_backends() -> list:
     else:
         print("Warning: WEBDAV_URL, WEBDAV_LOGIN, and WEBDAV_PASSWORD not set. WebDAV backend will be skipped.")
 
+    confluence_url = os.getenv('CONFLUENCE_URL')
+    confluence_user = os.getenv('CONFLUENCE_USER')
+    confluence_token = os.getenv('CONFLUENCE_TOKEN')
+    confluence_root_page = os.getenv('CONFLUENCE_ROOT_PAGE_ID')
+    confluence_sync = os.getenv('CONFLUENCE_SYNC_PAGE_CONTENT', 'false').lower() == 'true'
+    if confluence_url and confluence_user and confluence_token and confluence_root_page:
+        try:
+            from src.dictature.backend.confluence import DictatureBackendConfluence
+            backends.append(DictatureBackendConfluence(
+                base_url=confluence_url,
+                username=confluence_user,
+                api_token=confluence_token,
+                root_page_id=confluence_root_page,
+                sync_page_content=confluence_sync
+            ))
+        except ImportError as e:
+            print(f"Warning: Could not load Confluence backend: {e}")
+    else:
+        print("Warning: CONFLUENCE_URL, CONFLUENCE_USER, CONFLUENCE_TOKEN, and CONFLUENCE_ROOT_PAGE_ID not set. Confluence backend will be skipped.")
+
     return backends
 
 

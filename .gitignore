@@ -7,3 +7,4 @@ test*
 *.egg-info/
 dist/
 __pycache__
+.env
