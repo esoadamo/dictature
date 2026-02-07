@@ -9,6 +9,7 @@ from .backend import DictatureBackendMock, ValueMode, Value
 from .transformer import MockTransformer, PassthroughTransformer
 
 
+
 class Dictature:
     def __init__(
             self,
@@ -16,7 +17,8 @@ class Dictature:
             name_transformer: MockTransformer = PassthroughTransformer(),
             value_transformer: MockTransformer = PassthroughTransformer(),
             table_name_transformer: Optional[MockTransformer] = None,
-            allow_pickle: bool = True,
+            allow_pickle: bool = False,
+            allow_invalid_keys: bool = True,
     ) -> None:
         """
         Create a new Dictature object
@@ -25,6 +27,7 @@ class Dictature:
         :param value_transformer: transformer to use for values
         :param table_name_transformer: transformer to use for table names, if None, name_transformer is used
         :param allow_pickle: if True, pickle is allowed for values (warning: this may be a security risk if the data is not trusted)
+        :param allow_invalid_keys: if True, keys that cannot be decoded are quietly skipped
         """
         self.__backend = backend
         self.__table_cache: Dict[str, "DictatureTable"] = {}
@@ -33,13 +36,23 @@ class Dictature:
         self.__table_name_transformer = table_name_transformer or name_transformer
         self.__cache_size = 4096
         self.__allow_pickle = allow_pickle
+        self.__allow_invalid_keys = allow_invalid_keys
 
     def keys(self) -> Set[str]:
         """
         Return all table names
         :return: all table names
         """
-        return set(map(self.__table_name_transformer.backward, self.__backend.keys()))
+        result = set()
+        for key in self.__backend.keys():
+            try:
+                decoded = self.__table_name_transformer.backward(key)
+            except Exception:
+                if self.__allow_invalid_keys:
+                    continue
+                raise
+            result.add(decoded)
+        return result
 
     def values(self) -> Iterator["DictatureTable"]:
         """
@@ -86,6 +99,7 @@ class Dictature:
                 value_transformer=self.__value_transformer,
                 table_name_transformer=self.__table_name_transformer,
                 allow_pickle=self.__allow_pickle,
+                allow_invalid_keys=self.__allow_invalid_keys,
             )
         return self.__table_cache[item]
 
@@ -121,7 +135,8 @@ class DictatureTable:
             name_transformer: MockTransformer = PassthroughTransformer(),
             value_transformer: MockTransformer = PassthroughTransformer(),
             table_name_transformer: Optional[MockTransformer] = None,
-            allow_pickle: bool = True
+            allow_pickle: bool = False,
+            allow_invalid_keys: bool = True,
     ):
         """
         Create a new DictatureTable object
@@ -130,6 +145,7 @@ class DictatureTable:
         :param name_transformer:  transformer to use for key names
         :param value_transformer: transformer to use for values
         :param allow_pickle: if True, pickle is allowed for values (warning: this may be a security risk if the data is not trusted)
+        :param allow_invalid_keys: if True, keys that cannot be decoded are quietly skipped
         """
         self.__backend = backend
         self.__name_transformer = name_transformer
@@ -138,6 +154,7 @@ class DictatureTable:
         self.__table = self.__backend.table(self.__table_key(table_name))
         self.__table_created = False
         self.__allow_pickle = allow_pickle
+        self.__allow_invalid_keys = allow_invalid_keys
 
     def get(self, item: str, default: Optional[Any] = None) -> Any:
         """
@@ -166,7 +183,16 @@ class DictatureTable:
         :return: all keys in the table
         """
         self.__create_table()
-        return set(map(self.__name_transformer.backward, self.__table.keys()))
+        result = set()
+        for key in self.__table.keys():
+            try:
+                decoded = self.__name_transformer.backward(key)
+            except Exception:
+                if self.__allow_invalid_keys:
+                    continue
+                raise
+            result.add(decoded)
+        return result
 
     def values(self) -> Iterator[Any]:
         """

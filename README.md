@@ -50,6 +50,7 @@ Currently, the following backends are supported:
 - `DictatureBackendS3`: stores data in an S3 bucket
 - `DictatureBackendMySQL`: stores data in a MySQL database
 - `DictatureBackendBaserow`: stores data in a Baserow database
+- `DictatureSingleTableBackend`: virtual backend that stores all data in a single Dictature table
 
 ### Transformers
 

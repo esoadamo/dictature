@@ -11,6 +11,7 @@ from src.dictature import Dictature
 from src.dictature.backend.mock import DictatureBackendMock
 from src.dictature.backend.sqlite import DictatureBackendSQLite
 from src.dictature.backend.directory import DictatureBackendDirectory
+from src.dictature.backend.single_table import DictatureSingleTableBackend
 from src.dictature.transformer import PassthroughTransformer, PipelineTransformer
 from src.dictature.transformer.mock import MockTransformer
 from src.dictature.transformer.aes import AESTransformer
@@ -117,6 +118,7 @@ def initialize_extra_backends() -> list:
 DEFAULT_BACKENDS = [  # Default backends are tested with all transformer combinations
     DictatureBackendDirectory(mkdtemp(prefix='dictature')),
     DictatureBackendSQLite(mktemp(prefix='dictature', suffix='.sqlite3')),
+    DictatureSingleTableBackend(Dictature(DictatureBackendSQLite(mktemp(prefix='dictature_single_table', suffix='.sqlite3')), allow_pickle=True)['table']),
 ]
 EXTRA_BACKENDS = initialize_extra_backends()  # Extra backends tested only with passthrough transformers
 
@@ -219,7 +221,7 @@ class TestOperations(unittest.TestCase):
             backend=settings.backend,
             name_transformer=settings.name_transformer,
             value_transformer=settings.value_transformer,
-            table_name_transformer=settings.table_name_transformer
+            table_name_transformer=settings.table_name_transformer,
         )
         table = self.backend['table']
         table['key'] = 'value'
@@ -283,10 +285,22 @@ class TestOperations(unittest.TestCase):
             backend=settings.backend,
             name_transformer=settings.name_transformer,
             value_transformer=settings.value_transformer,
-            table_name_transformer=settings.table_name_transformer
+            table_name_transformer=settings.table_name_transformer,
+            allow_pickle=True,
         )
         self.backend['table']['key'] = NamedTuple
         self.assertEqual(self.backend['table']['key'], NamedTuple)
+
+    @parameterized.expand(SETTINGS, name_func=get_name_func)
+    def test_pickle_disabled_by_default(self, settings: Settings):
+        self.backend = Dictature(
+            backend=settings.backend,
+            name_transformer=settings.name_transformer,
+            value_transformer=settings.value_transformer,
+            table_name_transformer=settings.table_name_transformer,
+        )
+        with self.assertRaises(ValueError):
+            self.backend['table']['key'] = NamedTuple
 
     @parameterized.expand(SETTINGS, name_func=get_name_func)
     def test_deletion_of_table_key(self, settings: Settings):

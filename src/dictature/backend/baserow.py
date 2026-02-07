@@ -9,6 +9,8 @@ from .mock import DictatureBackendMock, DictatureTableMock, Value
 
 
 class DictatureBackendBaserowSingleTable(DictatureBackendMock):
+    REQUIRED_COLUMNS = ('table', 'key', 'value', 'mode')
+
     def __init__(
             self,
             token: str,
@@ -26,6 +28,31 @@ class DictatureBackendBaserowSingleTable(DictatureBackendMock):
         self.__headers = {
             'Authorization': f'Token {token}'
         }
+        self.__columns_validated = False
+
+    def _validate_columns(self) -> None:
+        """Validate that all required columns exist in the Baserow table (lazy, runs once on first access)."""
+        if self.__columns_validated:
+            return
+        
+        response = requests.get(
+            f"{self.__base_url}/api/database/fields/table/{self.__table_id}/",
+            headers=self.__headers
+        )
+        if not response.ok:
+            raise RuntimeError(f"Baserow API error {response.status_code}: {response.text}")
+        
+        fields = response.json()
+        existing_columns = {field['name'] for field in fields}
+        missing_columns = set(self.REQUIRED_COLUMNS) - existing_columns
+        
+        if missing_columns:
+            raise ValueError(
+                f"Baserow table {self.__table_id} is missing required columns: {', '.join(sorted(missing_columns))}. "
+                f"Required columns are: {', '.join(self.REQUIRED_COLUMNS)}"
+            )
+        
+        self.__columns_validated = True
 
     def keys(self) -> Iterable[str]:
         """Return all table names."""
@@ -45,6 +72,7 @@ class DictatureBackendBaserowSingleTable(DictatureBackendMock):
             params = None
 
     def table(self, name: str) -> 'DictatureTableMock':
+        self._validate_columns()
         return DictatureTableBaserowSingleTable(self, name)
 
     def _request(self, method: str, url: str, params: Optional[Dict[str, Any]] = None,
