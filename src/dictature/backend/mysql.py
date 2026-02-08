@@ -31,9 +31,12 @@ class DictatureBackendMySQL(DictatureBackendMock):
         # Remove None values from connection params
         self.__connection_params = {k: v for k, v in self.__connection_params.items() if v is not None}
 
+        self._connect()
+        self.__prefix = prefix.replace('`', '').replace("'", '')
+
+    def _connect(self):
         self.__connection = mysql.connector.connect(**self.__connection_params)
         self.__cursor = self.__connection.cursor()
-        self.__prefix = prefix.replace('`', '').replace("'", '')
 
     def keys(self) -> Iterable[str]:
         # noinspection SqlResolve
@@ -44,15 +47,27 @@ class DictatureBackendMySQL(DictatureBackendMock):
         return DictatureTableMySQL(self, name, self.__prefix)
 
     def _execute(self, query: str, data: tuple = ()) -> list:
-        self.__cursor.execute(query, data)
-        return self.__cursor.fetchall()
+        try:
+            self.__cursor.execute(query, data)
+            return self.__cursor.fetchall()
+        except mysql.connector.errors.Error as e:
+            # Check for lost connection errors (2013: Lost connection to MySQL server during query, 2006: MySQL server has gone away)
+            if e.errno in (2013, 2006):
+                self._connect()
+                self.__cursor.execute(query, data)
+                return self.__cursor.fetchall()
+            else:
+                raise e
 
     def _commit(self) -> None:
         self.__connection.commit()
 
     def __del__(self):
         if hasattr(self, '_DictatureBackendMySQL__connection'):
-            self.__connection.close()
+            try:
+                self.__connection.close()
+            except Exception:
+                pass
 
 
 class DictatureTableMySQL(DictatureTableMock):
