@@ -98,7 +98,7 @@ class DictatureTableMySQL(DictatureTableMock):
         self.__parent._execute(f"""
         CREATE TABLE IF NOT EXISTS {self.__table} (
         `key` VARCHAR(700) NOT NULL UNIQUE,
-        `value` TEXT,
+        `value` LONGTEXT,
         `type` INT NOT NULL DEFAULT 0,
         PRIMARY KEY (`key`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
