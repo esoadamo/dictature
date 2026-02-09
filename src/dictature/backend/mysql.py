@@ -51,13 +51,16 @@ class DictatureBackendMySQL(DictatureBackendMock):
             self.__cursor.execute(query, data)
             return self.__cursor.fetchall()
         except mysql.connector.errors.Error as e:
-            # Check for lost connection errors (2013: Lost connection to MySQL server during query, 2006: MySQL server has gone away)
-            if e.errno in (2013, 2006):
+            # Check for lost connection errors:
+            # 2013: Lost connection to MySQL server during query
+            # 2006: MySQL server has gone away
+            # 4031: The client was disconnected by the server because of inactivity
+            # 2055: Lost connection to MySQL server at '...'
+            if e.errno in (2013, 2006, 2055, 4031):
                 self._connect()
                 self.__cursor.execute(query, data)
                 return self.__cursor.fetchall()
-            else:
-                raise e
+            raise
 
     def _commit(self) -> None:
         self.__connection.commit()
