@@ -13,10 +13,18 @@ class DictatureBackendSQLite(DictatureBackendMock):
         :param prefix: prefix for the tables (default: 'tb_')
         """
         if isinstance(file, str):
-            file = Path(file)
-        self.__file = file
+            if file != ":memory:":
+                self.__file = Path(file)
+                self.__file_path = self.__file.absolute()
+            else:
+                self.__file = None
+                self.__file_path = ":memory:"
+        elif isinstance(file, Path):
+            self.__file = file
+            self.__file_path = self.__file.absolute()
+
         self.__connection = sqlite3.connect(
-            f"{self.__file.absolute()}",
+            self.__file_path,
             check_same_thread=False if sqlite3.threadsafety >= 3 else True
         )
         self.__cursor = self.__connection.cursor()
