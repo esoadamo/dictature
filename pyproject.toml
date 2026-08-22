@@ -1,11 +1,14 @@
 [build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "dictature"
 version = "1.2.0"
 description = "dictature -- A generic wrapper around dict-like interface with mulitple backends"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
 authors = [
     { name = "Adam Hlavacek", email = "git@adamhlavacek.com" }
 ]
@@ -14,11 +17,66 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
-readme = "README.md"
+dependencies = []
+
+[project.optional-dependencies]
+mysql = [
+    "mysql-connector-python>=8.0.0",
+]
+s3 = [
+    "boto3>=1.26.0",
+]
+webdav = [
+    "webdavclient3>=3.14.0",
+]
+confluence = [
+    "requests>=2.28.0",
+]
+baserow = [
+    "requests>=2.28.0",
+]
+misp = [
+    "pymisp>=2.4.0",
+]
+encryption = [
+    "pycryptodome>=3.15.0",
+]
+aes = [
+    "pycryptodome>=3.15.0",
+]
+full = [
+    "boto3>=1.26.0",
+    "mysql-connector-python>=8.0.0",
+    "pycryptodome>=3.15.0",
+    "pymisp>=2.4.0",
+    "requests>=2.28.0",
+    "webdavclient3>=3.14.0",
+]
+test = [
+    "parameterized>=0.9.0",
+    "pytest>=8.0.0",
+]
+dev = [
+    "boto3>=1.26.0",
+    "mysql-connector-python>=8.0.0",
+    "parameterized>=0.9.0",
+    "pycryptodome>=3.15.0",
+    "pymisp>=2.4.0",
+    "pytest>=8.0.0",
+    "requests>=2.28.0",
+    "webdavclient3>=3.14.0",
+]
+
+[dependency-groups]
+dev = [
+    "parameterized>=0.9.0",
+    "pytest>=8.0.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/esoadamo/dictature"
 Issues = "https://github.com/esoadamo/dictature/issues"
 
-[tool.setuptools]
-include-package-data = true
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

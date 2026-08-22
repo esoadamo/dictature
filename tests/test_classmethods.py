@@ -150,9 +150,11 @@ class TestWithCompression(unittest.TestCase):
     def _make(self, **kwargs) -> Dictature:
         return Dictature.sqlite(':memory:').with_compression(**kwargs)
 
-    def test_returns_self(self):
+    def test_returns_copy(self):
         d = Dictature.sqlite(':memory:')
-        self.assertIs(d.with_compression(), d)
+        copy = d.with_compression()
+        self.assertIsNot(copy, d)
+        self.assertIsInstance(copy, Dictature)
 
     def test_value_transformer_is_pipeline(self):
         self.assertIsInstance(_value_transformer(self._make()), PipelineTransformer)
@@ -168,7 +170,7 @@ class TestWithCompression(unittest.TestCase):
         self.assertEqual(d['t']['k'], {'list': [1, 2, 3], 'nested': {'a': True}})
 
     def test_stored_value_is_not_plaintext(self):
-        d = self._make()
+        d = self._make(table_names=False)
         d['t']['k'] = 'hello world'
         raw = _backend(d)._execute("SELECT value FROM `tb_t` WHERE key='k'")[0][0]
         self.assertNotEqual(raw, 'hello world')
@@ -190,9 +192,11 @@ class TestWithEncryption(unittest.TestCase):
     def _make(self, **kwargs) -> Dictature:
         return Dictature.sqlite(':memory:').with_encryption('secret-pass', **kwargs)
 
-    def test_returns_self(self):
+    def test_returns_copy(self):
         d = Dictature.sqlite(':memory:')
-        self.assertIs(d.with_encryption('secret'), d)
+        copy = d.with_encryption('secret')
+        self.assertIsNot(copy, d)
+        self.assertIsInstance(copy, Dictature)
 
     def test_value_transformer_is_pipeline(self):
         self.assertIsInstance(_value_transformer(self._make()), PipelineTransformer)
@@ -208,7 +212,7 @@ class TestWithEncryption(unittest.TestCase):
         self.assertEqual(d['t']['k'], [1, 'two', None])
 
     def test_stored_value_is_not_plaintext(self):
-        d = self._make()
+        d = self._make(names=False)
         d['t']['k'] = 'hello world'
         raw = _backend(d)._execute("SELECT value FROM `tb_t` WHERE key='k'")[0][0]
         self.assertNotEqual(raw, 'hello world')
@@ -228,8 +232,7 @@ class TestWithEncryption(unittest.TestCase):
         backend = _backend(d1)
         from src.dictature import Dictature as D
         from src.dictature.backend.mock import DictatureBackendMock
-        d2 = D(backend)
-        d2.with_encryption('wrong')
+        d2 = D(backend).with_encryption('wrong')
         with self.assertRaises(Exception):
             _ = d2['t']['k']
 
@@ -242,9 +245,11 @@ class TestWithHmac(unittest.TestCase):
     def _make(self, **kwargs) -> Dictature:
         return Dictature.sqlite(':memory:').with_hmac('my-secret', **kwargs)
 
-    def test_returns_self(self):
+    def test_returns_copy(self):
         d = Dictature.sqlite(':memory:')
-        self.assertIs(d.with_hmac(), d)
+        copy = d.with_hmac()
+        self.assertIsNot(copy, d)
+        self.assertIsInstance(copy, Dictature)
 
     def test_name_transformer_is_pipeline_by_default(self):
         # Default: names=True
@@ -294,10 +299,12 @@ _EXPIRATION_TIME_PATH = 'src.dictature.transformer.expiration.time'
 
 
 class TestWithExpiration(unittest.TestCase):
-    def test_returns_self(self):
+    def test_returns_copy(self):
         with patch(_EXPIRATION_TIME_PATH, return_value=1_000_000.0):
             d = Dictature.sqlite(':memory:')
-            self.assertIs(d.with_expiration(60), d)
+            copy = d.with_expiration(60)
+            self.assertIsNot(copy, d)
+            self.assertIsInstance(copy, Dictature)
 
     def test_value_transformer_is_pipeline(self):
         with patch(_EXPIRATION_TIME_PATH, return_value=1_000_000.0):
@@ -363,6 +370,29 @@ class TestWithExpiration(unittest.TestCase):
         raw = _backend(d)._execute("SELECT value FROM `tb_t` WHERE key='k'")[0][0]
         self.assertNotEqual(raw, 'hello')
         self.assertIn('-', raw)
+
+
+# ---------------------------------------------------------------------------
+# with_pickle
+# ---------------------------------------------------------------------------
+
+class TestWithPickle(unittest.TestCase):
+    def test_returns_copy(self):
+        d = Dictature.sqlite(':memory:')
+        copy = d.with_pickle(True)
+        self.assertIsNot(copy, d)
+        self.assertIsInstance(copy, Dictature)
+
+    def test_enables_pickle_on_copy_only(self):
+        from threading import Thread
+        d1 = Dictature.sqlite(':memory:')
+        d2 = d1.with_pickle(True)
+        # d2 allows pickle
+        d2['t']['k'] = Thread
+        self.assertEqual(d2['t']['k'], Thread)
+        # d1 still disallows pickle
+        with self.assertRaises(ValueError):
+            d1['t']['k2'] = Thread
 
 
 if __name__ == '__main__':

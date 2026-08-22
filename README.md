@@ -10,7 +10,24 @@ SQLite, directory, webdav, and more backends are supported, and you can easily c
 ## Installation
 
 ```shell
+# Base installation (SQLite, Directory, SingleTable, Gzip, HMAC, Expiration)
 pip install dictature
+# or with uv
+uv add dictature
+
+# With specific backend/feature dependencies
+pip install dictature[mysql]         # MySQL backend
+pip install dictature[s3]            # S3 / S3-compatible backend
+pip install dictature[webdav]        # WebDAV backend
+pip install dictature[confluence]    # Confluence backend
+pip install dictature[baserow]       # Baserow backend
+pip install dictature[misp]          # MISP backend
+pip install dictature[encryption]    # AES encryption transformer
+
+# Install all backend and transformer dependencies
+pip install dictature[full]
+# or with uv
+uv add "dictature[full]"
 ```
 
 ## Dictature usage

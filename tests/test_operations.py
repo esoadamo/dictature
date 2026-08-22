@@ -190,6 +190,8 @@ def get_transformer_name(transformer) -> str:
         return "Passthrough"
     elif class_name == "GzipTransformer":
         return "Gzip"
+    elif class_name == "ExpirationTransformer":
+        return "Expiration"
     
     return class_name
 

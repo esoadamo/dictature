@@ -250,7 +250,7 @@ def run_tests(test_dir: str = 'tests') -> bool:
         True if all tests passed, False otherwise
     """
     log_info("Running tests...")
-    cmd = [sys.executable, '-m', 'pytest', f'{test_dir}/test_operations.py', '-v']
+    cmd = [sys.executable, '-m', 'pytest', test_dir, '-v']
     
     result = subprocess.run(cmd)
     return result.returncode == 0
