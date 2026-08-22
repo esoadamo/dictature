@@ -32,6 +32,7 @@ print(dictionary['test']['list'])  # prints ['1', 2, True]
 
 # or anything, really (that can be serialized with pickle)
 from threading import Thread
+dictionary = dictionary.with_pickle(allow_pickle=True)
 dictionary['test']['thread'] = Thread
 print(dictionary['test']['thread'])  # prints <class 'threading.Thread'>
 

@@ -76,25 +76,51 @@ class Dictature:
         """
         return {k: v.to_dict() for k, v in self.items()}
 
+    def copy(self) -> "Dictature":
+        """
+        Create a copy of this Dictature
+        :return: a new Dictature instance with the same backend and transformers
+        """
+        return Dictature(
+            backend=self.__backend,
+            name_transformer=self.__name_transformer,
+            value_transformer=self.__value_transformer,
+            table_name_transformer=self.__table_name_transformer,
+            allow_pickle=self.__allow_pickle,
+            allow_invalid_keys=self.__allow_invalid_keys,
+        )
+
+    def with_pickle(self, allow_pickle: bool = True) -> "Dictature":
+        """
+        Enable pickle support on a copied Dictature instance
+
+        :param allow_pickle: if True, pickle is allowed for values (warning: this may be a security risk if the data is not trusted)
+        :return: a new Dictature instance with pickle support enabled
+        """
+        copy = self.copy()
+        copy.__allow_pickle = allow_pickle
+        return copy
+
     def with_compression(self, values: bool = True, names: bool = False, table_names: bool | None = None) -> "Dictature":
         """
         Enable gzip compression on this Dictature instance. Can be applied to values, key names, and/or
-        table names independently. Returns self for chaining.
+        table names independently. Returns a new copy of Dictature
 
         :param values: compress stored values (default: True)
         :param names: compress stored key names within tables (default: False)
         :param table_names: compress stored table names; if None, mirrors the ``names`` argument
-        :return: self
+        :return: new copy of dictature
         """
         from .transformer.gzip import GzipTransformer
+        copy = self.copy()
         table_names = table_names if table_names is not None else names
         if values:
-            self.__value_transformer = PipelineTransformer([self.__value_transformer, GzipTransformer()])
+            copy.__value_transformer = PipelineTransformer([copy.__value_transformer, GzipTransformer()])
         if names:
-            self.__name_transformer = PipelineTransformer([self.__name_transformer, GzipTransformer()])
+            copy.__name_transformer = PipelineTransformer([copy.__name_transformer, GzipTransformer()])
         if table_names:
-            self.__table_name_transformer = PipelineTransformer([self.__table_name_transformer, GzipTransformer()])
-        return self
+            copy.__table_name_transformer = PipelineTransformer([copy.__table_name_transformer, GzipTransformer()])
+        return copy
 
     def with_encryption(self, passphrase: str, values: bool = True, names: bool = True,
                         table_names: bool | None = None, static_names: bool | None = None, salt: str | None = None) -> "Dictature":
@@ -102,7 +128,7 @@ class Dictature:
         Enable AES encryption on this Dictature instance. Requires ``pycryptodome`` (``pip install pycryptodome``).
         Values are encrypted with AES-GCM (non-deterministic, more secure). Key and table names are encrypted
         with AES-ECB (deterministic — required so the same name always maps to the same stored key).
-        Returns self for chaining.
+        Returns a new copy of Dictature
 
         :param passphrase: secret passphrase used for key derivation
         :param values: encrypt stored values (default: True)
@@ -112,9 +138,10 @@ class Dictature:
             ``False`` forces GCM (non-deterministic); if None, names use ECB and values use GCM (default)
         :param salt: salt for scrypt key derivation; if None, values use ``'dictature-values'``
             and names use ``'dictature-names'`` so the derived keys differ between the two
-        :return: self
+        :return: a new copy of Dictature
         """
         from .transformer.aes import AESTransformer
+        copy = self.copy()
         table_names = table_names if table_names is not None else names
         salt_values = "dictature-values" if salt is None else salt
         salt_names = "dictature-names" if salt is None else salt
@@ -123,67 +150,69 @@ class Dictature:
         static_names_table_names = True if static_names is None else static_names
 
         if values:
-            self.__value_transformer = PipelineTransformer(
-                [self.__value_transformer, AESTransformer(passphrase, static_names_mode=static_names_values, salt=salt_values)]
+            copy.__value_transformer = PipelineTransformer(
+                [copy.__value_transformer, AESTransformer(passphrase, static_names_mode=static_names_values, salt=salt_values)]
             )
         if names:
-            self.__name_transformer = PipelineTransformer(
-                [self.__name_transformer, AESTransformer(passphrase, static_names_mode=static_names_names, salt=salt_names)]
+            copy.__name_transformer = PipelineTransformer(
+                [copy.__name_transformer, AESTransformer(passphrase, static_names_mode=static_names_names, salt=salt_names)]
             )
         if table_names:
-            self.__table_name_transformer = PipelineTransformer(
-                [self.__table_name_transformer, AESTransformer(passphrase, static_names_mode=static_names_table_names, salt=salt_names)]
+            copy.__table_name_transformer = PipelineTransformer(
+                [copy.__table_name_transformer, AESTransformer(passphrase, static_names_mode=static_names_table_names, salt=salt_names)]
             )
-        return self
+        return copy
 
     def with_hmac(self, secret: str = 'dictature', values: bool = False, names: bool = True,
                   table_names: bool | None = None) -> "Dictature":
         """
         Enable HMAC integrity checking on this Dictature instance. The HMAC is stored alongside the data;
-        reading back a value with a mismatched HMAC raises ``ValueError``. Returns self for chaining.
+        reading back a value with a mismatched HMAC raises ``ValueError``. Returns a new copy of Dictature
 
         :param secret: secret key for the HMAC (default: ``'dictature'``)
         :param values: apply HMAC to stored values (default: False)
         :param names: apply HMAC to stored key names within tables (default: True)
         :param table_names: apply HMAC to stored table names; if None, mirrors the ``names`` argument
-        :return: self
+        :return: a new copy of Dictature
         """
         from .transformer.hmac import HmacTransformer
+        copy = self.copy()
         table_names = table_names if table_names is not None else names
         if values:
-            self.__value_transformer = PipelineTransformer([self.__value_transformer, HmacTransformer(secret)])
+            copy.__value_transformer = PipelineTransformer([copy.__value_transformer, HmacTransformer(secret)])
         if names:
-            self.__name_transformer = PipelineTransformer([self.__name_transformer, HmacTransformer(secret)])
+            copy.__name_transformer = PipelineTransformer([copy.__name_transformer, HmacTransformer(secret)])
         if table_names:
-            self.__table_name_transformer = PipelineTransformer(
-                [self.__table_name_transformer, HmacTransformer(secret)]
+            copy.__table_name_transformer = PipelineTransformer(
+                [copy.__table_name_transformer, HmacTransformer(secret)]
             )
-        return self
+        return copy
 
     def with_expiration(self, expiration_time: float | int, values: bool = True, names: bool = False,
                         table_names: bool | None = None) -> "Dictature":
         """
         Enable TTL-based expiration on this Dictature instance. When a value is read after its TTL
-        has elapsed, ``KeyError`` is raised. Returns self for chaining.
+        has elapsed, ``KeyError`` is raised. Returns a new copy of Dictature.
 
         :param expiration_time: time-to-live in seconds; values older than this raise ``KeyError``
         :param values: apply expiration to stored values (default: True)
         :param names: apply expiration to stored key names within tables (default: False)
         :param table_names: apply expiration to stored table names; if None, mirrors the ``names`` argument
-        :return: self
+        :return: a new copy of Dictature
         """
         from .transformer.expiration import ExpirationTransformer
+        copy = self.copy()
         table_names = table_names if table_names is not None else names
         expiration_transformer = ExpirationTransformer(expiration_time)
         if values:
-            self.__value_transformer = PipelineTransformer([self.__value_transformer, expiration_transformer])
+            copy.__value_transformer = PipelineTransformer([copy.__value_transformer, expiration_transformer])
         if names:
-            self.__name_transformer = PipelineTransformer([self.__name_transformer, expiration_transformer])
+            copy.__name_transformer = PipelineTransformer([copy.__name_transformer, expiration_transformer])
         if table_names:
-            self.__table_name_transformer = PipelineTransformer(
-                [self.__table_name_transformer, expiration_transformer]
+            copy.__table_name_transformer = PipelineTransformer(
+                [copy.__table_name_transformer, expiration_transformer]
             )
-        return self
+        return copy
 
     def __str__(self):
         """
