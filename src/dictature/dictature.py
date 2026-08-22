@@ -96,7 +96,7 @@ class Dictature:
             self.__table_name_transformer = PipelineTransformer([self.__table_name_transformer, GzipTransformer()])
         return self
 
-    def with_encryption(self, passphrase: str, values: bool = True, names: bool = False,
+    def with_encryption(self, passphrase: str, values: bool = True, names: bool = True,
                         table_names: bool | None = None, static_names: bool | None = None, salt: str | None = None) -> "Dictature":
         """
         Enable AES encryption on this Dictature instance. Requires ``pycryptodome`` (``pip install pycryptodome``).
@@ -106,7 +106,7 @@ class Dictature:
 
         :param passphrase: secret passphrase used for key derivation
         :param values: encrypt stored values (default: True)
-        :param names: encrypt stored key names within tables (default: False)
+        :param names: encrypt stored key names within tables (default: True)
         :param table_names: encrypt stored table names; if None, mirrors the ``names`` argument
         :param static_names: override the AES mode for names/table_names — ``True`` forces ECB (deterministic),
             ``False`` forces GCM (non-deterministic); if None, names use ECB and values use GCM (default)
@@ -157,6 +157,31 @@ class Dictature:
         if table_names:
             self.__table_name_transformer = PipelineTransformer(
                 [self.__table_name_transformer, HmacTransformer(secret)]
+            )
+        return self
+
+    def with_expiration(self, expiration_time: float | int, values: bool = True, names: bool = False,
+                        table_names: bool | None = None) -> "Dictature":
+        """
+        Enable TTL-based expiration on this Dictature instance. When a value is read after its TTL
+        has elapsed, ``KeyError`` is raised. Returns self for chaining.
+
+        :param expiration_time: time-to-live in seconds; values older than this raise ``KeyError``
+        :param values: apply expiration to stored values (default: True)
+        :param names: apply expiration to stored key names within tables (default: False)
+        :param table_names: apply expiration to stored table names; if None, mirrors the ``names`` argument
+        :return: self
+        """
+        from .transformer.expiration import ExpirationTransformer
+        table_names = table_names if table_names is not None else names
+        expiration_transformer = ExpirationTransformer(expiration_time)
+        if values:
+            self.__value_transformer = PipelineTransformer([self.__value_transformer, expiration_transformer])
+        if names:
+            self.__name_transformer = PipelineTransformer([self.__name_transformer, expiration_transformer])
+        if table_names:
+            self.__table_name_transformer = PipelineTransformer(
+                [self.__table_name_transformer, expiration_transformer]
             )
         return self
 

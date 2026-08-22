@@ -2,6 +2,7 @@
 import importlib.util
 import unittest
 from tempfile import mkdtemp, mktemp
+from unittest.mock import patch
 
 from src.dictature import Dictature
 from src.dictature.backend.sqlite import DictatureBackendSQLite
@@ -283,6 +284,85 @@ class TestWithHmac(unittest.TestCase):
         _backend(d)._commit()
         with self.assertRaises(ValueError):
             _ = d['t']['k']
+
+
+# ---------------------------------------------------------------------------
+# with_expiration
+# ---------------------------------------------------------------------------
+
+_EXPIRATION_TIME_PATH = 'src.dictature.transformer.expiration.time'
+
+
+class TestWithExpiration(unittest.TestCase):
+    def test_returns_self(self):
+        with patch(_EXPIRATION_TIME_PATH, return_value=1_000_000.0):
+            d = Dictature.sqlite(':memory:')
+            self.assertIs(d.with_expiration(60), d)
+
+    def test_value_transformer_is_pipeline(self):
+        with patch(_EXPIRATION_TIME_PATH, return_value=1_000_000.0):
+            d = Dictature.sqlite(':memory:').with_expiration(60)
+        self.assertIsInstance(_value_transformer(d), PipelineTransformer)
+
+    def test_round_trip_before_expiry(self):
+        with patch(_EXPIRATION_TIME_PATH, return_value=1_000_000.0):
+            d = Dictature.sqlite(':memory:').with_expiration(60)
+            d['t']['k'] = 'hello'
+        with patch(_EXPIRATION_TIME_PATH, return_value=1_000_001.0):
+            self.assertEqual(d['t']['k'], 'hello')
+
+    def test_round_trip_complex_value(self):
+        with patch(_EXPIRATION_TIME_PATH, return_value=1_000_000.0):
+            d = Dictature.sqlite(':memory:').with_expiration(60)
+            d['t']['k'] = {'list': [1, 2], 'flag': True}
+        with patch(_EXPIRATION_TIME_PATH, return_value=1_000_001.0):
+            self.assertEqual(d['t']['k'], {'list': [1, 2], 'flag': True})
+
+    def test_value_still_readable_just_before_expiry(self):
+        with patch(_EXPIRATION_TIME_PATH, return_value=1_000_000.0):
+            d = Dictature.sqlite(':memory:').with_expiration(60)
+            d['t']['k'] = 'hello'
+        with patch(_EXPIRATION_TIME_PATH, return_value=1_000_059.9):
+            self.assertEqual(d['t']['k'], 'hello')
+
+    def test_expired_value_raises_key_error(self):
+        with patch(_EXPIRATION_TIME_PATH, return_value=1_000_000.0):
+            d = Dictature.sqlite(':memory:').with_expiration(60)
+            d['t']['k'] = 'hello'
+        with patch(_EXPIRATION_TIME_PATH, return_value=1_000_061.0):
+            with self.assertRaises(KeyError):
+                _ = d['t']['k']
+
+    def test_different_keys_can_have_different_write_times(self):
+        d = Dictature.sqlite(':memory:').with_expiration(60)
+        with patch(_EXPIRATION_TIME_PATH, return_value=1_000_000.0):
+            d['t']['early'] = 'first'
+        with patch(_EXPIRATION_TIME_PATH, return_value=1_000_050.0):
+            d['t']['late'] = 'second'
+        with patch(_EXPIRATION_TIME_PATH, return_value=1_000_065.0):
+            # early: written at t=0, expires at t=60 → expired at t=65
+            with self.assertRaises(KeyError):
+                _ = d['t']['early']
+            # late: written at t=50, expires at t=110 → still valid at t=65
+            self.assertEqual(d['t']['late'], 'second')
+
+    def test_rewriting_resets_expiry(self):
+        d = Dictature.sqlite(':memory:').with_expiration(60)
+        with patch(_EXPIRATION_TIME_PATH, return_value=1_000_000.0):
+            d['t']['k'] = 'first'
+        with patch(_EXPIRATION_TIME_PATH, return_value=1_000_050.0):
+            d['t']['k'] = 'renewed'
+        with patch(_EXPIRATION_TIME_PATH, return_value=1_000_100.0):
+            # 100s since first write, but only 50s since rewrite → still valid
+            self.assertEqual(d['t']['k'], 'renewed')
+
+    def test_stored_value_contains_timestamp(self):
+        with patch(_EXPIRATION_TIME_PATH, return_value=1_000_000.0):
+            d = Dictature.sqlite(':memory:').with_expiration(60)
+            d['t']['k'] = 'hello'
+        raw = _backend(d)._execute("SELECT value FROM `tb_t` WHERE key='k'")[0][0]
+        self.assertNotEqual(raw, 'hello')
+        self.assertIn('-', raw)
 
 
 if __name__ == '__main__':

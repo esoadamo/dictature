@@ -167,6 +167,7 @@ Currently, the following transformers are supported:
 - `AESTransformer`: encrypts/decrypts the data using AES
 - `HmacTransformer`: signs the data using HMAC or performs hash integrity checks
 - `GzipTransformer`: compresses given data
+- `ExpirationTransformer`: expires data after a given time
 - `PassthroughTransformer`: does nothing
 - `PipelineTransformer`: chains multiple transformers
 
