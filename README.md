@@ -14,7 +14,69 @@ pip install dictature
 ```
 
 ## Dictature usage
-This package also includes a class that allows you to use your SQLite db or any backend as a Python dictionary:
+This package also includes a class that allows you to use your SQLite db or any backend as a Python dictionary.
+
+### Quickstart
+
+First step is to create a backend, then first level is table name and second level are actual keys:
+```python
+from dictature import Dictature
+dictionary = Dictature.sqlite('test_data.sqlite3')
+
+# will create a table db_test and there a row called foo with value bar
+dictionary['test']['foo'] = 'bar'
+
+# also support anything that can be jsonized
+dictionary['test']['list'] = ['1', 2, True]
+print(dictionary['test']['list'])  # prints ['1', 2, True]
+
+# or anything, really (that can be serialized with pickle)
+from threading import Thread
+dictionary['test']['thread'] = Thread
+print(dictionary['test']['thread'])  # prints <class 'threading.Thread'>
+
+# and deleting
+del dictionary['test']['list']  # deletes the record
+del dictionary['test']  # drops whole table
+```
+
+Each built-in backend has a convenient classmethod constructor on `Dictature`:
+
+```python
+from dictature import Dictature
+
+# SQLite (built-in, no extra deps)
+dictionary = Dictature.sqlite('test_data.sqlite3')
+dictionary = Dictature.sqlite(':memory:')          # in-memory
+
+# Directory — stores each value as a file
+dictionary = Dictature.directory('test_data/')
+
+# Single-table — virtualises multiple tables inside one existing DictatureTable
+base = Dictature.sqlite('test_data.sqlite3')
+dictionary = Dictature.single_table(base['storage'])
+
+# MySQL (pip install mysql-connector-python)
+dictionary = Dictature.mysql(host='localhost', user='root', password='secret', database='mydb')
+
+# S3 / S3-compatible (pip install boto3)
+dictionary = Dictature.s3('my-bucket', aws_access_key_id='...', aws_secret_access_key='...')
+dictionary = Dictature.s3('my-bucket', endpoint_url='http://localhost:9000')  # MinIO etc.
+
+# WebDAV (pip install webdavclient3)
+dictionary = Dictature.webdav('https://dav.example.com/', login='user', password='secret')
+
+# Confluence (pip install requests)
+dictionary = Dictature.confluence('https://yoursite.atlassian.net/wiki', 'user@example.com', 'api-token', 'PAGE_ID')
+
+# Baserow (pip install requests)
+dictionary = Dictature.baserow(token='my-token', table_id=42)
+
+# MISP (pip install pymisp)
+dictionary = Dictature.misp('https://misp.example.com', 'api-key')
+```
+
+Alternatively, construct backends directly:
 
 ```python
 from dictature import Dictature
@@ -52,6 +114,34 @@ Currently, the following backends are supported:
 - `DictatureBackendBaserow`: stores data in a Baserow database
 - `DictatureSingleTableBackend`: virtual backend that stores all data in a single Dictature table
 - `DictatureBackendConfluence`: stores the data in a Confluence instance
+
+### Transformers via `with_*` chaining
+
+After creating an instance with any backend method, you can chain `with_*` calls to layer
+transformers without touching the underlying backend:
+
+```python
+from dictature import Dictature
+
+# Compress all stored values (gzip + base64 — no extra deps)
+dictionary = Dictature.sqlite('data.sqlite3').with_compression()
+
+# Encrypt values with AES-GCM; also encrypt key names with AES-ECB
+dictionary = Dictature.sqlite('data.sqlite3').with_encryption('my-passphrase', names=True)
+
+# Add HMAC integrity checking to key names (raises ValueError on tampered keys)
+dictionary = Dictature.sqlite('data.sqlite3').with_hmac('my-secret')
+
+# Chain multiple transformers: encrypt then compress
+dictionary = (
+    Dictature.sqlite('data.sqlite3')
+    .with_encryption('my-passphrase')
+    .with_compression()
+)
+```
+
+All three methods accept the same `values`, `names`, and `table_names` boolean flags so you can
+decide exactly what gets transformed.
 
 ### Transformers
 
