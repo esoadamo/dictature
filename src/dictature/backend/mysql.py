@@ -1,15 +1,17 @@
+from __future__ import annotations
+
 try:
     import mysql.connector
 except ImportError:
     raise ImportError('Requires: pip install mysql-connector-python') from None
-from typing import Iterable
+from typing import Iterable, Optional
 
 from .mock import DictatureBackendMock, DictatureTableMock, Value
 
 
 class DictatureBackendMySQL(DictatureBackendMock):
-    def __init__(self, host: str, port: int = 3306, user: str = None, password: str = None,
-                 database: str = None, prefix: str = 'tb_', **kwargs) -> None:
+    def __init__(self, host: str, port: int = 3306, user: Optional[str] = None, password: Optional[str] = None,
+                 database: Optional[str] = None, prefix: str = 'tb_', **kwargs) -> None:
         """
         Create a new MySQL backend
         :param host: MySQL server host

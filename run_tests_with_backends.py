@@ -42,19 +42,20 @@ def log_error(message: str) -> None:
     print(f"{RED}[ERROR]{RESET} {message}")
 
 
-def run_command(cmd: List[str], check: bool = True) -> subprocess.CompletedProcess:
+def run_command(cmd: List[str], check: bool = True, timeout: Optional[int] = None) -> subprocess.CompletedProcess:
     """
     Run a shell command and return the result.
     
     Args:
         cmd: Command and arguments as a list
         check: Whether to raise an exception on non-zero exit code
-        
+        timeout: Maximum seconds to wait for command completion
+
     Returns:
         CompletedProcess instance with command results
     """
     try:
-        return subprocess.run(cmd, capture_output=True, text=True, check=check)
+        return subprocess.run(cmd, capture_output=True, text=True, check=check, timeout=timeout)
     except subprocess.CalledProcessError as e:
         log_error(f"Command failed: {' '.join(cmd)}")
         log_error(f"stdout: {e.stdout}")
@@ -62,7 +63,7 @@ def run_command(cmd: List[str], check: bool = True) -> subprocess.CompletedProce
         raise
 
 
-def start_services(docker_compose_file: str = 'dictature-test-backends-compose.yml', enabled_backends: Dict[str, bool] = None) -> None:
+def start_services(docker_compose_file: str = 'dictature-test-backends-compose.yml', enabled_backends: Optional[Dict[str, bool]] = None) -> None:
     """
     Start enabled backend services and stop disabled ones.
     
@@ -110,7 +111,7 @@ def start_services(docker_compose_file: str = 'dictature-test-backends-compose.y
     log_info("Services started. Waiting for health checks...")
 
 
-def wait_for_services(enabled_backends: Optional[Dict[str, bool]] = None, timeout: int = 360) -> None:
+def wait_for_services(enabled_backends: Optional[Dict[str, bool]] = None, timeout: int = 600) -> None:
     """
     Wait for enabled backend services to become healthy.
     
@@ -126,7 +127,7 @@ def wait_for_services(enabled_backends: Optional[Dict[str, bool]] = None, timeou
         'misp': ['dictature-misp', 'dictature-mysql', 'dictature-redis'],
         'baserow': ['dictature-baserow'],
     }
-    
+
     # Determine which services to wait for
     services = set()
     if enabled_backends:
@@ -143,27 +144,29 @@ def wait_for_services(enabled_backends: Optional[Dict[str, bool]] = None, timeou
     
     log_info(f"Waiting for services: {', '.join(sorted(services))}")
     start_time = time.time()
-    
-    for service in sorted(services):
-        while time.time() - start_time < timeout:
+
+    unhealthy = set(services)
+    while unhealthy and time.time() - start_time < timeout:
+        for service in sorted(unhealthy):
             result = run_command(
                 ['podman', 'inspect', '-f', '{{.State.Health.Status}}', service],
-                check=False
+                check=False,
+                timeout=5
             )
-            
+
             if result.returncode == 0:
-                if 'healthy' in result.stdout:
+                if 'healthy' in result.stdout.lower():
                     log_info(f"✓ {service} is healthy")
+                    unhealthy.discard(service)
                     break
-                elif 'unhealthy' in result.stdout:
+                elif 'unhealthy' in result.stdout.lower():
                     log_warning(f"Service {service} is unhealthy, retrying...")
-            
-            time.sleep(5)
-        else:
-            log_warning(f"Timeout waiting for {service} to become healthy")
+        time.sleep(1)
+    if unhealthy:
+        log_warning(f"Timeout waiting for some {', '.join(sorted(unhealthy))} to become healthy")
 
 
-def setup_environment_variables(enabled_backends: Dict[str, bool]) -> None:
+def setup_environment_variables(enabled_backends: Optional[Dict[str, bool]] = None) -> None:
     """
     Configure environment variables for enabled backends.
     

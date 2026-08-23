@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import io
 import posixpath
-from typing import Iterable
+from typing import Iterable, Optional
 
 try:
     import boto3
@@ -15,10 +17,10 @@ class DictatureBackendS3(DictatureBackendMock):
     def __init__(
             self,
             bucket_name: str,
-            aws_access_key_id: str = None,
-            aws_secret_access_key: str = None,
-            region_name: str = None,
-            endpoint_url: str = None,
+            aws_access_key_id: Optional[str] = None,
+            aws_secret_access_key: Optional[str] = None,
+            region_name: Optional[str] = None,
+            endpoint_url: Optional[str] = None,
             dir_prefix: str = 'db_',
             item_prefix: str = 'item_'
     ) -> None:

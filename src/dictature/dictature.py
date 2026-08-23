@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import json
 import pickle
 from gzip import compress, decompress
 from base64 import b64encode, b64decode
 from pathlib import Path
 from random import choice
-from typing import Optional, Dict, Any, Set, Iterator, Tuple
+from typing import Optional, Dict, Any, Set, Iterator, Tuple, Union
 
 from .backend import DictatureBackendMock, ValueMode, Value
 from .transformer import MockTransformer, PassthroughTransformer, PipelineTransformer
@@ -101,7 +103,7 @@ class Dictature:
         copy.__allow_pickle = allow_pickle
         return copy
 
-    def with_compression(self, values: bool = True, names: bool = False, table_names: bool | None = None) -> "Dictature":
+    def with_compression(self, values: bool = True, names: bool = False, table_names: Optional[bool] = None) -> "Dictature":
         """
         Enable gzip compression on this Dictature instance. Can be applied to values, key names, and/or
         table names independently. Returns a new copy of Dictature
@@ -123,7 +125,7 @@ class Dictature:
         return copy
 
     def with_encryption(self, passphrase: str, values: bool = True, names: bool = True,
-                        table_names: bool | None = None, static_names: bool | None = None, salt: str | None = None) -> "Dictature":
+                        table_names: Optional[bool] = None, static_names: Optional[bool] = None, salt: Optional[str] = None) -> "Dictature":
         """
         Enable AES encryption on this Dictature instance. Requires ``pycryptodome`` (``pip install pycryptodome``).
         Values are encrypted with AES-GCM (non-deterministic, more secure). Key and table names are encrypted
@@ -164,7 +166,7 @@ class Dictature:
         return copy
 
     def with_hmac(self, secret: str = 'dictature', values: bool = False, names: bool = True,
-                  table_names: bool | None = None) -> "Dictature":
+                  table_names: Optional[bool] = None) -> "Dictature":
         """
         Enable HMAC integrity checking on this Dictature instance. The HMAC is stored alongside the data;
         reading back a value with a mismatched HMAC raises ``ValueError``. Returns a new copy of Dictature
@@ -188,8 +190,8 @@ class Dictature:
             )
         return copy
 
-    def with_expiration(self, expiration_time: float | int, values: bool = True, names: bool = False,
-                        table_names: bool | None = None) -> "Dictature":
+    def with_expiration(self, expiration_time: Union[float, int], values: bool = True, names: bool = False,
+                        table_names: Optional[bool] = None) -> "Dictature":
         """
         Enable TTL-based expiration on this Dictature instance. When a value is read after its TTL
         has elapsed, ``KeyError`` is raised. Returns a new copy of Dictature.
@@ -265,7 +267,7 @@ class Dictature:
         return not not self.keys()
 
     @classmethod
-    def sqlite(cls, path: Path | str, prefix: str = "tb_") -> "Dictature":
+    def sqlite(cls, path: Union[Path, str], prefix: str = "tb_") -> "Dictature":
         """
         Create a Dictature backed by a local SQLite database.
 
@@ -277,7 +279,7 @@ class Dictature:
         return Dictature(DictatureBackendSQLite(path, prefix=prefix))
 
     @classmethod
-    def directory(cls, directory: Path | str, dir_prefix: str = "db_", item_prefix: str = "item_") -> "Dictature":
+    def directory(cls, directory: Union[Path, str], dir_prefix: str = "db_", item_prefix: str = "item_") -> "Dictature":
         """
         Create a Dictature that stores each table as a sub-directory and each value as a file.
 
@@ -304,8 +306,8 @@ class Dictature:
         return Dictature(DictatureSingleTableBackend(table, separator=separator))
 
     @classmethod
-    def mysql(cls, host: str, port: int = 3306, user: str = None, password: str = None,
-              database: str = None, prefix: str = "tb_", **kwargs) -> "Dictature":
+    def mysql(cls, host: str, port: int = 3306, user: Optional[str] = None, password: Optional[str] = None,
+              database: Optional[str] = None, prefix: str = "tb_", **kwargs) -> "Dictature":
         """
         Create a Dictature backed by a MySQL (or MariaDB) database.
         Requires ``mysql-connector-python`` (``pip install mysql-connector-python``).
@@ -324,8 +326,8 @@ class Dictature:
                                                database=database, prefix=prefix, **kwargs))
 
     @classmethod
-    def s3(cls, bucket_name: str, aws_access_key_id: str = None, aws_secret_access_key: str = None,
-           region_name: str = None, endpoint_url: str = None,
+    def s3(cls, bucket_name: str, aws_access_key_id: Optional[str] = None, aws_secret_access_key: Optional[str] = None,
+           region_name: Optional[str] = None, endpoint_url: Optional[str] = None,
            dir_prefix: str = "db_", item_prefix: str = "item_") -> "Dictature":
         """
         Create a Dictature backed by an S3 bucket (or any S3-compatible store such as MinIO).
@@ -347,7 +349,7 @@ class Dictature:
                                             dir_prefix=dir_prefix, item_prefix=item_prefix))
 
     @classmethod
-    def webdav(cls, hostname: str, login: str = None, password: str = None,
+    def webdav(cls, hostname: str, login: Optional[str] = None, password: Optional[str] = None,
                dir_prefix: str = "db_", item_prefix: str = "item_", **kwargs) -> "Dictature":
         """
         Create a Dictature backed by a WebDAV share.

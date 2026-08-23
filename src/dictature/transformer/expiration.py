@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 from time import time
+from typing import Union
 from .mock import MockTransformer
 
 
 class ExpirationTransformer(MockTransformer):
-    def __init__(self, expiration_time: float | int):
+    def __init__(self, expiration_time: Union[float, int]):
         """
         Creates a new ExpirationTransformer.
 
